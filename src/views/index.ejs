@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en-us" ng-app="myApp">
+    <head>
+        <title>My Application</title>
+        <meta charset="UTF-8">
+        <link rel="shortcut icon" href="../assets/favicon.ico">
+        <!-- load bootstrap and fontawesome via CDN -->
+        <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"/>           
+        <link rel="stylesheet" href="../assets/mycss.css"/>      
+        <!-- load angular via CDN -->        
+        <script src="//code.angularjs.org/1.6.4/angular.min.js"></script>                    
+        <!-- load angular route via CDN -->
+        <script src="//code.angularjs.org/1.6.4/angular-route.min.js"></script>    
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.5.0/Chart.js"></script>                             
+        <script src="../assets/tc-angular-chartjs.js"></script>     
+        <script src="../assets/appc.js"></script>     
+    </head>
+    <body>
+        <header>
+			<nav class="navbar navbar-default"> 
+                
+                <div class="container">
+				    <div class="navbar-header">
+					   <a class="navbar-brand" href="#!">MyApplication</a>
+				    </div>
+
+				    <ul class="nav navbar-nav navbar-right">
+					    <li><a href="#!/admin"><i class="fa fa-home"></i> Admin</a></li>                        
+				    </ul>
+			     </div>               
+                
+			</nav>
+		</header>
+        
+                
+        <div class="container-main">
+
+            <div ng-view></div>
+            
+		</div>
+        
+        <div class="footer-text">
+            <p>Posted by: Bacalhau</p>            
+        </div>
+        
+    </body>
+</html>
