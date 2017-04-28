@@ -1,0 +1,7 @@
+module.exports = {
+
+    'secret':'myfirstsecret'
+
+
+
+};
