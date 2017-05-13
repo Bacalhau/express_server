@@ -12,6 +12,8 @@
         <script src="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.6.4/angular.min.js"></script>                    
         <!-- load angular route via CDN -->
         <script src="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.6.4/angular-route.min.js"></script>    
+
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.6.1/angular-cookies.min.js"></script>            
         
         <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.5.0/Chart.js"></script>                             
         <script src="../assets/tc-angular-chartjs.js"></script>     
@@ -23,12 +25,13 @@
                 
                 <div class="container">
 				    <div class="navbar-header">
-					   <a class="navbar-brand" href="#!">MyApplication</a>
+					   <a class="navbar-brand">DataHub</a>
 				    </div>
 
 				    <ul class="nav navbar-nav navbar-right">
-					    <li><a href="#!/admin"><i class="fa fa-home"></i> Admin</a></li>                        
-				    </ul>
+
+					    <li><a href="#!/logout" ng-hide="g_logout_hide"><i class="fa fa-home"></i> Logout</a></li>                        
+				    </ul>  
 			     </div>               
                 
 			</nav>

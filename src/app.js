@@ -3,6 +3,7 @@ var https = require('https');
 var jwt    = require('jsonwebtoken');
 var express = require('express');
 var bodyParser = require('body-parser');
+var cookieParser = require('cookie-parser')
 var _ = require('underscore');
 var configParameter =require('./config.js');
 var privateKey  = fs.readFileSync('privatekey.key', 'utf8');
@@ -14,26 +15,38 @@ var port = process.env.PORT || 8443;
 var credentials = {key: privateKey, cert: certificate};
 
 var app = express();
-
+app.use(cookieParser());
 app.set('view engine', 'ejs');
 
 var LoggedUsers = [];
+var TokenOnline = [];
+
 var database = [
     {   
         username:"joao@joao",
-        password:"joao"
+        password:"joao",
+        HasAccess: [
+            '/admin',
+            '/api/routeB',
+        ],        
     },
     {   
         username:"baca@baca",
-        password:"baca"
+        password:"baca",
+        HasAccess: [],        
     }
 
 ];
 
 
-var routesToSecure = [
-  '/admin',
-  '/api/routeB',
+var freeAccess = [
+    '/',
+    '/forgotpassword',
+    '/login',
+    '/assets',
+    '/login/',
+    '/forgotpassword/'    
+
 ]; 
 
 app.use('/assets', express.static(__dirname + '/public'));
@@ -43,19 +56,66 @@ app.use(bodyParser.urlencoded({     // to support URL-encoded bodies
   extended: true
 })); 
 
+function search(array,item)
+{
+    for(var i = 0; i< array.length; i++ )
+    {
+        if(array[i] === item)
+        {
+            return true;
+        }
+    }
+    return false;
+}
 
-app.use(function(req, res, next) {
-  // .. some logic here .. like any other middleware
-  console.log("MIDDLEWARE");
-  console.log(req.path);
-  if (req.path === '/admin') 
+
+function indexSearch(array,item)
+{
+    for(var i = 0; i< array.length; i++ )
+    {
+        if(array[i] === item)
+        {
+            return i;
+        }
+    }
+    return undefined;
+}
+
+app.use(function(req, res, next) {  
+  console.log("MIDDLEWAR - Requested path: " + req.path);  
+  if (search(freeAccess,req.path)) 
   {
-     res.sendStatus(404);
-     
+        console.log("ON FREE ACCESS LIST");
+        next();        
   }
   else
   {
-      next();
+        console.log("Restricted area");
+        console.log('Cookies: ', req.cookies);
+        if(search(TokenOnline,req.cookies.accessToken))//Search for token. if Logged and has access
+        {
+            console.log('User on list');
+
+            try {
+                var decoded = jwt.verify(req.cookies.accessToken, configParameter.secret);
+                console.log(decoded) // bar                                 
+                var payload = jwt.decode(req.cookies.accessToken);
+                console.log(payload) // bar                 
+                next();  
+                
+            } catch(err) 
+            {
+                    console.log('token expired');
+                    res.sendStatus(404);  
+            }
+
+            
+            
+        }
+        else
+        {
+             res.sendStatus(404);  
+        }        
   }  
 });
 
@@ -75,6 +135,7 @@ app.get('/forgotpassword', function(req,res) {
     res.render('forgotpassword');
 });
 
+
 //Hidden URL
 app.get('/bye', function(req,res) {
     res.send('bye');
@@ -83,38 +144,35 @@ app.get('/bye', function(req,res) {
 app.post('/login',function(req,res){
 
     console.log("POST RECEIVED");
-    console.log(req.body.username);
-    console.log(req.body.password);
-
-
     var user = _.where(database,{ username:req.body.username,password:req.body.password }) || [];
  
     if(_.isEmpty(user))//User not Found
     {
         console.log("user not found");   
-        res.sendStatus(404);
+        res.sendStatus(404);  
     }
     else
     {        
         console.log(user);        
         if(_.isEmpty(_.where(LoggedUsers,user)||[]))
         {
-            LoggedUsers.push(user);
-            res.redirect('/admin');
-            console.log(LoggedUsers);
+            //Generate token
+            var newtoken = jwt.sign({
+                     username: 'user.username',
+                     HasAccess: 'user.HasAccess'
+            }, configParameter.secret , { expiresIn: '1m' });
+            
+            user[0].token = newtoken;                        
+            TokenOnline.push(newtoken);           
+
+            res.cookie('accessToken', newtoken , { expires: new Date(Date.now() + 900000), secure: true });
+            res.status(200).end();                       
         }
         else
         {
 
         }       
-        
     }
-    
-
-
-    
-    
-
 });
 
 app.post('/forgotpassword',function(req,res){
@@ -127,7 +185,7 @@ app.post('/forgotpassword',function(req,res){
     if(_.isEmpty(user))//User not Found
     {
         console.log("user not found");   
-        res.sendStatus(404);        
+        res.sendStatus(404);    
     }
     else
     {        
