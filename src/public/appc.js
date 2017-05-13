@@ -7,11 +7,37 @@ myApp.config(function ($routeProvider) {
     $routeProvider        
     .when('/admin', {
         templateUrl: './admin',
-        controller: 'adminController'
+        controller: 'adminController',
+         resolve: {
+            message: function($location,$log,$rootScope,$cookies){                
+                if($cookies.get('accessToken')===undefined)
+                {
+                    $rootScope.g_logout_hide=1;
+                    $location.path('/');
+                }
+                else
+                {
+                    return $log.log('Logged');    
+                }
+        }}
     })
     .when('/', {
         templateUrl: './login',
-        controller: 'mainController'
+        controller: 'mainController',
+        resolve: {
+            message: function($location,$log,$rootScope,$cookies){                
+                if($cookies.get('accessToken')===undefined)
+                {
+                    $rootScope.g_logout_hide=1;
+                    $location.path('/');
+                    return $log.log('notLogged');    
+                }
+                else
+                {
+                    $location.path('/admin');
+                    return $log.log('Logged');    
+                }
+        }}
     })
     .when('/forgotpassword', {
         templateUrl: './forgotpassword',
@@ -19,13 +45,12 @@ myApp.config(function ($routeProvider) {
     })
     .when('/logout', {
         resolve: {
-            message: function($location,$log,$rootScope,$cookies){
+            message: function($location,$log,$rootScope,$cookies){                
                 $cookies.remove('accessToken');
                 $rootScope.g_logout_hide=1;
                 $location.path('/');
                 return $log.log('RESOLVE');
-        }
-        }
+        }}
     })
 });
 
@@ -82,16 +107,16 @@ myApp.controller('adminController', ['$scope','$route','$log','$cookies','$windo
  
 
 $rootScope.g_logout_hide=0;
+
+
 $scope.Mybutton = function(){
 
 
 $log.log('Pressed');
-$log.log($cookies.getAll());
+$log.log($cookies.get('accessToken'));
 $log.log('REMOVE');
 $cookies.remove('accessToken');
-$log.log($cookies.getAll());
-
-
+$log.log($cookies.get('accessToken'));
 };
 
 
@@ -101,12 +126,13 @@ $log.log($cookies.getAll());
 myApp.controller('forgotpasswordController', ['$scope','$http','$log','$rootScope', function($scope,$http,$log,$rootScope) {
   
     $rootScope.g_logout_hide=1;
-    $scope.email ="";    
+    $rootScope.g_forgotpassword_show=1;
+    $rootScope.g_forgotpassword_error=0;
+    $scope.email ="";        
+    
     $scope.submit = function(form) { 
-
         
         
-        $scope.isDisabled=true;
 
         var host = location.host;             
         var req = {
@@ -123,12 +149,12 @@ myApp.controller('forgotpasswordController', ['$scope','$http','$log','$rootScop
 
         $http(req).then(function(data, status, headers, config){
 
-            $log.log('success');
-            $scope.isDisabled=false;
+            $log.log('success');            
+            $rootScope.g_forgotpassword_show=0; 
+            $rootScope.g_forgotpassword_error=0;           
         }, function(data, status, headers, config){
-
-           $log.log('error');
-           $scope.isDisabled=false;
+            $rootScope.g_forgotpassword_error=1;
+           $log.log('error');                      
         });
 
     }
