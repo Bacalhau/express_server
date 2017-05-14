@@ -41,16 +41,22 @@ myApp.config(function ($routeProvider) {
     })
     .when('/forgotpassword', {
         templateUrl: './forgotpassword',
-        controller: 'forgotpasswordController'
+        controller: 'forgotpasswordController'       
     })
     .when('/logout', {
         resolve: {
-            message: function($location,$log,$rootScope,$cookies){                
+            message: function($location,$log,$rootScope,$cookies){                  
+                          
                 $cookies.remove('accessToken');
                 $rootScope.g_logout_hide=1;
                 $location.path('/');
                 return $log.log('RESOLVE');
         }}
+    })
+    .when('/register', {
+        templateUrl: './register',
+        controller: 'registerController'
+       
     })
 });
 
@@ -159,6 +165,73 @@ myApp.controller('forgotpasswordController', ['$scope','$http','$log','$rootScop
 
     }
 
+}]);
 
+
+
+
+
+myApp.controller('registerController', ['$scope','$route','$log','$cookies','$window','$rootScope','$http','$location','$timeout', function($scope,$route,$log,$cookies,$window,$rootScope,$http,$location,$timeout) {    
+ 
+$rootScope.g_logout_hide=1;
+$rootScope.g_register_error=0;
+$rootScope.g_register_show=1;
+
+  $scope.submit = function(form) {    
+    $rootScope.g_register_error=0;
+    $rootScope.g_register_show=1;
+    if(($scope.name===undefined)||($scope.lastname===undefined)||($scope.email===undefined)||($scope.password===undefined)||($scope.passwordcheck===undefined))
+    {
+        $scope.message="Fill all the the registration form";
+        $rootScope.g_register_error=1;
+    }
+    else
+    {
+        
+        if($scope.password===$scope.passwordcheck)
+        {
+            var host = location.host;        
+            var req = {
+                        method: 'POST',
+                        url: 'https://'+ host +'/register/',
+                        headers:    {
+                                        'Content-Type': 'application/json'
+                                    },
+                        data:       { 
+                                        name: $scope.name,
+                                        lastname: $scope.lastname,
+                                        username: $scope.email,
+                                        password: $scope.password
+                                    }
+                    }
+            
+            
+            $http(req).then(function(data, status, headers, config){
+
+                $log.log('success');                                                                  
+                $rootScope.g_register_show=0;
+                $timeout(function(){$location.url('/');},3000);                
+
+            }, function(data, status, headers, config)
+            {            
+                $scope.message="The server could not send the e-mail.";
+                $rootScope.g_register_error=1;
+                $log.log('error');
+            });                  
+        }
+        else
+        {
+            $scope.message="Password dont match";
+            $rootScope.g_register_error=1;
+        }
+
+    }
+    $log.log('register pressed');
+    $log.log($scope.name);
+    $log.log($scope.lastname);
+    $log.log($scope.email);
+    $log.log($scope.password);
+    $log.log($scope.passwordcheck);
+  }
 
 }]);

@@ -45,8 +45,9 @@ var freeAccess = [
     '/login',
     '/assets',
     '/login/',
-    '/forgotpassword/'    
-
+    '/forgotpassword/',
+    '/register/',
+    '/register'
 ]; 
 
 app.use('/assets', express.static(__dirname + '/public'));
@@ -135,11 +136,10 @@ app.get('/forgotpassword', function(req,res) {
     res.render('forgotpassword');
 });
 
-
-//Hidden URL
-app.get('/bye', function(req,res) {
-    res.send('bye');
+app.get('/register', function(req,res) {
+    res.render('register');
 });
+
 
 app.post('/login',function(req,res){
 
@@ -192,6 +192,12 @@ app.post('/forgotpassword',function(req,res){
         console.log(user);        
         res.sendStatus(200);       
     }
+
+});
+
+
+app.post('/register',function(req,res){
+    res.sendStatus(200);       
 
 });
 
