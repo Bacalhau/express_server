@@ -208,13 +208,13 @@ $rootScope.g_register_show=1;
             
             $http(req).then(function(data, status, headers, config){
 
-                $log.log('success');                                                                  
+                $log.log('success');                                                                
                 $rootScope.g_register_show=0;
                 $timeout(function(){$location.url('/');},3000);                
 
             }, function(data, status, headers, config)
             {            
-                $scope.message="The server could not send the e-mail.";
+                $scope.message=data.data.message;
                 $rootScope.g_register_error=1;
                 $log.log('error');
             });                  

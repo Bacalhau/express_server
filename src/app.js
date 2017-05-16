@@ -1,3 +1,4 @@
+'use strict';
 var fs = require('fs');
 var https = require('https');
 var jwt    = require('jsonwebtoken');
@@ -8,6 +9,45 @@ var _ = require('underscore');
 var configParameter =require('./config.js');
 var privateKey  = fs.readFileSync('privatekey.key', 'utf8');
 var certificate = fs.readFileSync('certificate.crt', 'utf8');
+var nodemailer = require('nodemailer');
+
+function getDateTime_email() {
+
+    var date = new Date();
+
+    var hour = date.getHours();
+    hour = (hour < 10 ? "0" : "") + hour;
+
+    var min  = date.getMinutes();
+    min = (min < 10 ? "0" : "") + min;
+
+    var sec  = date.getSeconds();
+    sec = (sec < 10 ? "0" : "") + sec;
+
+    var year = date.getFullYear();
+
+    var month = date.getMonth() + 1;
+    month = (month < 10 ? "0" : "") + month;
+
+    var day  = date.getDate();
+    day = (day < 10 ? "0" : "") + day;
+
+    
+	return    day + "/" + month + "/" + year + " - " + hour + ":" + min + ":" + sec;
+
+}
+
+var email_subject =  getDateTime_email();
+var email_body =  '';
+
+// create reusable transporter object using the default SMTP transport
+var transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: 'mynodeservermail@gmail.com',
+        pass: 'mailpassword'
+    }
+});
 
 
 var port = process.env.PORT || 8443;
@@ -18,6 +58,7 @@ var app = express();
 app.use(cookieParser());
 app.set('view engine', 'ejs');
 
+var NewUsers = [];
 var LoggedUsers = [];
 var TokenOnline = [];
 
@@ -47,7 +88,8 @@ var freeAccess = [
     '/login/',
     '/forgotpassword/',
     '/register/',
-    '/register'
+    '/register',
+    '/confirmation/'
 ]; 
 
 app.use('/assets', express.static(__dirname + '/public'));
@@ -140,6 +182,15 @@ app.get('/register', function(req,res) {
     res.render('register');
 });
 
+//https://localhost:8443/confirmation/?id=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiam9hbyIsImlhdCI6MTQ5NDgxNDE2Mn0.mse9BRZx-j1SXRDfeCCzwAnW-dmozeQtky7E8iGA6II
+app.get('/confirmation/', function (req, res) {
+  console.log('confirmation link');
+  console.log(req.query);
+   res.render('confirmation');
+});
+
+
+
 
 app.post('/login',function(req,res){
 
@@ -158,8 +209,8 @@ app.post('/login',function(req,res){
         {
             //Generate token
             var newtoken = jwt.sign({
-                     username: 'user.username',
-                     HasAccess: 'user.HasAccess'
+                     username: user.username,
+                     HasAccess: user.HasAccess
             }, configParameter.secret , { expiresIn: '1m' });
             
             user[0].token = newtoken;                        
@@ -197,11 +248,52 @@ app.post('/forgotpassword',function(req,res){
 
 
 app.post('/register',function(req,res){
-    res.sendStatus(200);       
+    console.log(req.body);
+    var user = _.where(database,{ username:req.body.username}) || [];
+    if(_.isEmpty(user))//User not Found can be created
+    {   
 
+        var token = jwt.sign({ user: req.body.name }, 'confirmationId');
+        console.log(token);
+        var new_user = {
+            name:req.body.name,
+            lastname:req.body.lastname,
+            username:req.body.username,
+            password:req.body.password,
+            expire:Date.now(),
+            confirmationId:token
+        };
+        NewUsers.push(new_user);
+        console.log(new_user);
+        var confirmation_link = 'https://localhost:8443/confirmation/?id=' + token;
+        // setup email data with unicode symbols
+        var mailOptions = {
+            from: '"DataHub Registration" <mynodeservermail@gmail.com>', // sender address
+            to: new_user.username, // list of receivers
+            subject: 'DataHub Registration', // Subject line
+            text: confirmation_link, // plain text body
+        };
+
+        // send mail with defined transport object
+        transporter.sendMail(mailOptions, (error, info) => {
+            if (error) {
+                res.status(404);
+                return console.log(error);
+            }        
+                res.status(200).send({ message: 'email sent' });
+                console.log('email sent');
+            console.log('Message %s sent: %s', info.messageId, info.response);
+        });
+    }
+    else//user exists
+    {
+        res.status(404).send({ message: 'User Already exist!' });
+         console.log('user exist');
+    }      
 });
+
+
 
 var httpsServer = https.createServer(credentials, app);
 
 httpsServer.listen(port);
-
