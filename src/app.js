@@ -10,6 +10,16 @@ var configParameter =require('./config.js');
 var privateKey  = fs.readFileSync('privatekey.key', 'utf8');
 var certificate = fs.readFileSync('certificate.crt', 'utf8');
 var nodemailer = require('nodemailer');
+var my_ejs = require('ejs');
+
+fs.readFile(__dirname + '/views/email.ejs','utf8',function (err, data) {
+  if (err) throw err;
+
+  var html_string = my_ejs.render(data, { name:'joao'});
+    console.log(html_string);
+
+
+});
 
 function getDateTime_email() {
 
@@ -190,8 +200,6 @@ app.get('/confirmation/', function (req, res) {
 });
 
 
-
-
 app.post('/login',function(req,res){
 
     console.log("POST RECEIVED");
@@ -265,25 +273,37 @@ app.post('/register',function(req,res){
         };
         NewUsers.push(new_user);
         console.log(new_user);
-        var confirmation_link = 'https://localhost:8443/confirmation/?id=' + token;
+        var confirmation_link = 'https://localhost:8443/email/?id=' + token;
         // setup email data with unicode symbols
-        var mailOptions = {
-            from: '"DataHub Registration" <mynodeservermail@gmail.com>', // sender address
-            to: new_user.username, // list of receivers
-            subject: 'DataHub Registration', // Subject line
-            text: confirmation_link, // plain text body
-        };
+       
+        fs.readFile(__dirname + '/views/email.ejs','utf8',function (err, data) {
+            if (err) throw err;
 
-        // send mail with defined transport object
-        transporter.sendMail(mailOptions, (error, info) => {
-            if (error) {
-                res.status(404);
-                return console.log(error);
-            }        
-                res.status(200).send({ message: 'email sent' });
-                console.log('email sent');
-            console.log('Message %s sent: %s', info.messageId, info.response);
-        });
+            var html_string = my_ejs.render(data, { name:'joao'});
+            console.log(html_string);
+            var mailOptions = {
+                from: '"DataHub Registration" <mynodeservermail@gmail.com>', // sender address
+                to: new_user.username, // list of receivers
+                subject: 'DataHub Registration', // Subject line
+                html: html_string
+            };
+
+            // send mail with defined transport object
+            transporter.sendMail(mailOptions, (error, info) => {
+                if (error) {
+                    res.status(404);
+                    return console.log(error);
+                }        
+                    res.status(200).send({ message: 'email sent' });
+                    console.log('email sent');
+                console.log('Message %s sent: %s', info.messageId, info.response);
+            });
+
+                
+            });
+        
+
+        
     }
     else//user exists
     {
