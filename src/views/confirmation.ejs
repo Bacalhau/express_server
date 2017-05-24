@@ -8,12 +8,27 @@
         <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"/>            
     </head>
     <body>
-        <header>
-			
-		</header>
         
-            Your account is active.            
-    
-        
+
+            <div class="col-md-4 col-md-offset-4">
+                <div class="panel panel-default">
+                        <div class="panel-body">
+                            <div ng-hide="g_forgotpassword_show">
+                                <div class="<%= type %>" role="alert"  >
+                                        <%= msg %>                         
+                                </div>
+                                <a href="https://localhost:8443" role="button" class="btn btn-success center-block" >Go to Login</a>
+                             </div>
+                        </div>
+
+                    
+                        
+                </div>
+            </div>
+        </div>
     </body>
 </html>
+
+
+
+

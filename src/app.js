@@ -7,19 +7,9 @@ var bodyParser = require('body-parser');
 var cookieParser = require('cookie-parser')
 var _ = require('underscore');
 var configParameter =require('./config.js');
-var privateKey  = fs.readFileSync('privatekey.key', 'utf8');
-var certificate = fs.readFileSync('certificate.crt', 'utf8');
 var nodemailer = require('nodemailer');
 var my_ejs = require('ejs');
 
-fs.readFile(__dirname + '/views/email.ejs','utf8',function (err, data) {
-  if (err) throw err;
-
-  var html_string = my_ejs.render(data, { name:'joao'});
-    console.log(html_string);
-
-
-});
 
 function getDateTime_email() {
 
@@ -47,68 +37,6 @@ function getDateTime_email() {
 
 }
 
-var email_subject =  getDateTime_email();
-var email_body =  '';
-
-// create reusable transporter object using the default SMTP transport
-var transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-        user: 'mynodeservermail@gmail.com',
-        pass: 'mailpassword'
-    }
-});
-
-
-var port = process.env.PORT || 8443;
-
-var credentials = {key: privateKey, cert: certificate};
-
-var app = express();
-app.use(cookieParser());
-app.set('view engine', 'ejs');
-
-var NewUsers = [];
-var LoggedUsers = [];
-var TokenOnline = [];
-
-var database = [
-    {   
-        username:"joao@joao",
-        password:"joao",
-        HasAccess: [
-            '/admin',
-            '/api/routeB',
-        ],        
-    },
-    {   
-        username:"baca@baca",
-        password:"baca",
-        HasAccess: [],        
-    }
-
-];
-
-
-var freeAccess = [
-    '/',
-    '/forgotpassword',
-    '/login',
-    '/assets',
-    '/login/',
-    '/forgotpassword/',
-    '/register/',
-    '/register',
-    '/confirmation/'
-]; 
-
-app.use('/assets', express.static(__dirname + '/public'));
-
-app.use( bodyParser.json() );       // to support JSON-encoded bodies
-app.use(bodyParser.urlencoded({     // to support URL-encoded bodies
-  extended: true
-})); 
-
 function search(array,item)
 {
     for(var i = 0; i< array.length; i++ )
@@ -119,6 +47,19 @@ function search(array,item)
         }
     }
     return false;
+}
+
+function searchUser(array,obj)
+{
+    var user = _.where(array,obj) || [];
+    if(_.isEmpty(user))//token not found
+    {
+        return false;
+    }
+    else
+    {
+        return true;
+    }
 }
 
 
@@ -134,6 +75,68 @@ function indexSearch(array,item)
     return undefined;
 }
 
+
+var NewUsers = [];
+var LoggedUsers = [];
+
+var database = [
+    {   
+        username:"gatekeeper@datahub",
+        password:"joao",
+        application: 'admin'        
+    },
+    {   
+        username:"baca@baca",
+        password:"baca",
+        application: 'app1',        
+    }
+
+];
+
+
+var freeAccess = [
+    '/',
+    '/forgotpassword',
+    '/login',
+    '/assets',
+    '/login/',
+    '/forgotpassword/',
+    '/register/',
+    '/register',
+    '/confirmation/',
+    '/logout',
+    '/logout/'
+]; 
+
+
+var privateKey  = fs.readFileSync('privatekey.key', 'utf8');
+var certificate = fs.readFileSync('certificate.crt', 'utf8');
+
+var port = process.env.PORT || 8443;
+var credentials = {key: privateKey, cert: certificate};
+
+// create reusable transporter object using the default SMTP transport
+var transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: 'mynodeservermail@gmail.com',
+        pass: 'mailpassword'
+    }
+});
+
+var app = express();
+app.set('view engine', 'ejs');
+
+//MIDDLEWARE
+app.use(cookieParser());
+
+app.use('/assets', express.static(__dirname + '/public'));
+
+app.use(bodyParser.json());       // to support JSON-encoded bodies
+app.use(bodyParser.urlencoded({     // to support URL-encoded bodies
+  extended: true
+})); 
+
 app.use(function(req, res, next) {  
   console.log("MIDDLEWAR - Requested path: " + req.path);  
   if (search(freeAccess,req.path)) 
@@ -143,9 +146,9 @@ app.use(function(req, res, next) {
   }
   else
   {
-        console.log("Restricted area");
-        console.log('Cookies: ', req.cookies);
-        if(search(TokenOnline,req.cookies.accessToken))//Search for token. if Logged and has access
+        console.log("Restricted area");        
+        //if(search(TokenOnline,req.cookies.accessToken))//Search for token. if Logged and has access
+        if(searchUser(LoggedUsers,{ token:req.cookies.accessToken}))//Search for token. if Logged and has access
         {
             console.log('User on list');
 
@@ -160,10 +163,7 @@ app.use(function(req, res, next) {
             {
                     console.log('token expired');
                     res.sendStatus(404);  
-            }
-
-            
-            
+            }            
         }
         else
         {
@@ -176,8 +176,28 @@ app.get('/', function(req,res) {
     res.render('index');
 });
 
-app.get('/admin', function(req,res) {
-    res.render('admin');
+app.get('/workspace', function(req,res) {
+    //find on a vector the user application and return it
+    var user = _.where(LoggedUsers,{ token:req.cookies.accessToken}) || [];
+    if(_.isEmpty(user))//User not Found
+    {
+        console.log('User expired');
+         res.sendStatus(404); 
+    }
+    else
+    {
+        if(user[0].application ==='msg')
+        {
+            res.render('msg',{label:'Warning',type:'alert alert-warning',msg:'The gatekeeper did not assign an application for you yet.'});
+        }
+        else
+        {
+            var app_files = './'+ user[0].application + '/' + user[0].application;
+            console.log(app_files);
+            res.render(app_files);
+        }
+        
+    }
 });
 
 app.get('/login', function(req,res) {
@@ -196,7 +216,30 @@ app.get('/register', function(req,res) {
 app.get('/confirmation/', function (req, res) {
   console.log('confirmation link');
   console.log(req.query);
-   res.render('confirmation');
+
+   var user = _.where(NewUsers,{ confirmationId:req.query.id}) || [];
+    if(_.isEmpty(user))//token not found
+    {
+        console.log('Token not found');
+        res.render('confirmation',{type:'alert alert-danger',msg:'Your account could not be confirmed.'});
+    }
+    else
+    {
+        console.log(Date.now()-user[0].expire);
+        if((Date.now()-user[0].expire)>900000)//15min
+        {
+             res.render('confirmation',{type:'alert alert-danger',msg:'Your account could not be confirmed.'});
+             
+        }
+        else
+        {
+            database.push(user[0]);
+            console.log(database);
+            res.render('confirmation',{type:'alert alert-success',msg:'Your account is confirmed.'});
+        }
+    }
+    
+   
 });
 
 
@@ -212,24 +255,24 @@ app.post('/login',function(req,res){
     }
     else
     {        
-        console.log(user);        
-        if(_.isEmpty(_.where(LoggedUsers,user)||[]))
+        console.log(user[0]);        
+        if(_.isEmpty(_.where(LoggedUsers,user[0])||[]))
         {
             //Generate token
             var newtoken = jwt.sign({
-                     username: user.username,
-                     HasAccess: user.HasAccess
+                     username: user[0].username,
+                     application: user[0].application
             }, configParameter.secret , { expiresIn: '1m' });
             
             user[0].token = newtoken;                        
-            TokenOnline.push(newtoken);           
-
+                      
+            LoggedUsers.push(user[0]);
             res.cookie('accessToken', newtoken , { expires: new Date(Date.now() + 900000), secure: true });
             res.status(200).end();                       
         }
         else
         {
-
+            res.status(404).end(); 
         }       
     }
 });
@@ -248,8 +291,32 @@ app.post('/forgotpassword',function(req,res){
     }
     else
     {        
-        console.log(user);        
-        res.sendStatus(200);       
+          
+        fs.readFile(__dirname + '/views/emailRecovery.ejs','utf8',function (err, data) {
+            if (err) throw err;
+
+            var html_string = my_ejs.render(data, { name:user[0].name,lastname:user[0].lastname,password:user[0].password});
+            console.log(html_string);
+            var mailOptions = {
+                from: '"DataHub" <mynodeservermail@gmail.com>', // sender address
+                to: user[0].username, // list of receivers
+                subject: 'Password Recovery', // Subject line
+                html: html_string
+            };
+
+            // send mail with defined transport object
+            transporter.sendMail(mailOptions, (error, info) => {
+                if (error) {
+                    res.status(404);
+                    return console.log(error);
+                }        
+                    res.status(200).send({ message: 'email sent' });
+                    console.log('email sent');
+                console.log('Message %s sent: %s', info.messageId, info.response);
+            });
+
+                
+            });    
     }
 
 });
@@ -262,27 +329,36 @@ app.post('/register',function(req,res){
     {   
 
         var token = jwt.sign({ user: req.body.name }, 'confirmationId');
-        console.log(token);
+        var app_req = _.where(configParameter.applications,{ key:req.body.appkey}) || [];
+
         var new_user = {
             name:req.body.name,
             lastname:req.body.lastname,
             username:req.body.username,
             password:req.body.password,
             expire:Date.now(),
-            confirmationId:token
+            confirmationId:token,
+            application: 'msg'
         };
+
+
+        if((_.isEmpty(app_req))===false)
+        {
+            new_user.application = app_req.name;
+            console.log('Application Found')
+        }
+       
         NewUsers.push(new_user);
-        console.log(new_user);
-        var confirmation_link = 'https://localhost:8443/email/?id=' + token;
+        var confirmation_link = 'https://localhost:8443/confirmation/?id=' + token;
         // setup email data with unicode symbols
        
         fs.readFile(__dirname + '/views/email.ejs','utf8',function (err, data) {
             if (err) throw err;
 
-            var html_string = my_ejs.render(data, { name:'joao'});
+            var html_string = my_ejs.render(data, { name:new_user.name,lastname:new_user.lastname,link:confirmation_link});
             console.log(html_string);
             var mailOptions = {
-                from: '"DataHub Registration" <mynodeservermail@gmail.com>', // sender address
+                from: '"DataHub" <mynodeservermail@gmail.com>', // sender address
                 to: new_user.username, // list of receivers
                 subject: 'DataHub Registration', // Subject line
                 html: html_string
@@ -312,6 +388,23 @@ app.post('/register',function(req,res){
     }      
 });
 
+
+
+app.post('/logout',function(req,res){
+
+
+var remove_user = _.findWhere(LoggedUsers, {username:req.body.username})
+if(remove_user===undefined)
+{
+    res.status(404).send({ message: 'User not found' });
+}
+else
+{
+    LoggedUsers = _.without(LoggedUsers,remove_user);
+    res.status(200).send({ message: 'User logged out' });
+}
+
+});
 
 
 var httpsServer = https.createServer(credentials, app);

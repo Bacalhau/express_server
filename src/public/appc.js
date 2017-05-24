@@ -5,9 +5,9 @@ myApp.config(function ($routeProvider) {
     
    
     $routeProvider        
-    .when('/admin', {
-        templateUrl: './admin',
-        controller: 'adminController',
+    .when('/workspace', {
+        templateUrl: './workspace',
+        controller: 'workspaceController',
          resolve: {
             message: function($location,$log,$rootScope,$cookies){                
                 if($cookies.get('accessToken')===undefined)
@@ -34,7 +34,7 @@ myApp.config(function ($routeProvider) {
                 }
                 else
                 {
-                    $location.path('/admin');
+                    $location.path('/workspace');
                     return $log.log('Logged');    
                 }
         }}
@@ -45,12 +45,39 @@ myApp.config(function ($routeProvider) {
     })
     .when('/logout', {
         resolve: {
-            message: function($location,$log,$rootScope,$cookies){                  
-                          
-                $cookies.remove('accessToken');
-                $rootScope.g_logout_hide=1;
-                $location.path('/');
-                return $log.log('RESOLVE');
+            message: function($location,$log,$rootScope,$cookies,$http){                  
+               $log.log('fnc - resolve logout');           
+                var host = location.host;  
+                              
+                var req = {
+                    method: 'POST',            
+                    url: 'https://'+ host +'/logout/',
+                    headers: {
+                                'Content-Type': 'application/json'
+                             },
+                    data: { 
+                            username: $rootScope.email              
+
+                          }
+                        }
+                        $log.log(req);  
+                $http(req).then(function(data, status, headers, config){
+
+                    $cookies.remove('accessToken');
+                    $rootScope.g_logout_hide=1;
+                    $rootScope.email = '';
+                    $location.path('/');
+                    $log.log('success'); 
+                    window.location.reload();
+
+                }, function(data, status, headers, config){
+                    $cookies.remove('accessToken');
+                    $rootScope.g_logout_hide=1;
+                    $rootScope.email = '';
+                    $location.path('/');
+                    $log.log('error'); 
+                    window.location.reload();
+                });
         }}
     })
     .when('/register', {
@@ -95,8 +122,8 @@ myApp.controller('mainController', ['$scope','$http','$log','$location','$route'
         $http(req).then(function(data, status, headers, config){
 
             $log.log('success');                
-                       
-            $location.url('/admin');            
+            $rootScope.email =  $scope.email;          
+            $location.url('/workspace');            
 
         }, function(data, status, headers, config)
         {            
@@ -109,14 +136,13 @@ myApp.controller('mainController', ['$scope','$http','$log','$location','$route'
     
 }]);
 
-myApp.controller('adminController', ['$scope','$route','$log','$cookies','$window','$rootScope', function($scope,$route,$log,$cookies,$window,$rootScope) {    
+myApp.controller('workspaceController', ['$scope','$route','$log','$cookies','$window','$rootScope', function($scope,$route,$log,$cookies,$window,$rootScope) {    
  
 
 $rootScope.g_logout_hide=0;
 
 
 $scope.Mybutton = function(){
-
 
 $log.log('Pressed');
 $log.log($cookies.get('accessToken'));
@@ -129,10 +155,10 @@ $log.log($cookies.get('accessToken'));
 }]);
 
 
-myApp.controller('forgotpasswordController', ['$scope','$http','$log','$rootScope', function($scope,$http,$log,$rootScope) {
+myApp.controller('forgotpasswordController', ['$scope','$http','$log','$rootScope','$location','$timeout', function($scope,$http,$log,$rootScope,$location,$timeout) {
   
     $rootScope.g_logout_hide=1;
-    $rootScope.g_forgotpassword_show=1;
+    $rootScope.g_forgotpassword_success=0;
     $rootScope.g_forgotpassword_error=0;
     $scope.email ="";        
     
@@ -156,8 +182,10 @@ myApp.controller('forgotpasswordController', ['$scope','$http','$log','$rootScop
         $http(req).then(function(data, status, headers, config){
 
             $log.log('success');            
-            $rootScope.g_forgotpassword_show=0; 
-            $rootScope.g_forgotpassword_error=0;           
+            $rootScope.g_forgotpassword_success=1; 
+            $rootScope.g_forgotpassword_error=0;
+            $timeout(function(){$location.url('/');},3000);
+
         }, function(data, status, headers, config){
             $rootScope.g_forgotpassword_error=1;
            $log.log('error');                      
@@ -190,6 +218,12 @@ $rootScope.g_register_show=1;
         
         if($scope.password===$scope.passwordcheck)
         {
+            if($scope.appkey===undefined)
+            {
+                $scope.appkey='msg';
+ 
+            }
+            $log.log($scope.appkey);
             var host = location.host;        
             var req = {
                         method: 'POST',
@@ -198,14 +232,15 @@ $rootScope.g_register_show=1;
                                         'Content-Type': 'application/json'
                                     },
                         data:       { 
-                                        name: $scope.name,
+                                        name:     $scope.name,
                                         lastname: $scope.lastname,
                                         username: $scope.email,
-                                        password: $scope.password
+                                        password: $scope.password,
+                                        appkey:   $scope.appkey
                                     }
                     }
             
-            
+            $log.log(req);
             $http(req).then(function(data, status, headers, config){
 
                 $log.log('success');                                                                
@@ -227,11 +262,6 @@ $rootScope.g_register_show=1;
 
     }
     $log.log('register pressed');
-    $log.log($scope.name);
-    $log.log($scope.lastname);
-    $log.log($scope.email);
-    $log.log($scope.password);
-    $log.log($scope.passwordcheck);
   }
 
 }]);
