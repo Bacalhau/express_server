@@ -5,22 +5,6 @@ myApp.config(function ($routeProvider) {
     
    
     $routeProvider        
-    .when('/workspace', {
-        templateUrl: './workspace',
-        controller: 'workspaceController',
-         resolve: {
-            message: function($location,$log,$rootScope,$cookies){                
-                if($cookies.get('accessToken')===undefined)
-                {
-                    $rootScope.g_logout_hide=1;
-                    $location.path('/');
-                }
-                else
-                {
-                    return $log.log('Logged');    
-                }
-        }}
-    })
     .when('/', {
         templateUrl: './login',
         controller: 'mainController',
@@ -28,13 +12,11 @@ myApp.config(function ($routeProvider) {
             message: function($location,$log,$rootScope,$cookies){                
                 if($cookies.get('accessToken')===undefined)
                 {
-                    $rootScope.g_logout_hide=1;
                     $location.path('/');
                     return $log.log('notLogged');    
                 }
                 else
                 {
-                    $location.path('/workspace');
                     return $log.log('Logged');    
                 }
         }}
@@ -51,7 +33,7 @@ myApp.config(function ($routeProvider) {
                               
                 var req = {
                     method: 'POST',            
-                    url: 'https://'+ host +'/logout/',
+                    url: 'http://'+ host +'/logout/',
                     headers: {
                                 'Content-Type': 'application/json'
                              },
@@ -64,7 +46,6 @@ myApp.config(function ($routeProvider) {
                 $http(req).then(function(data, status, headers, config){
 
                     $cookies.remove('accessToken');
-                    $rootScope.g_logout_hide=1;
                     $rootScope.email = '';
                     $location.path('/');
                     $log.log('success'); 
@@ -72,7 +53,6 @@ myApp.config(function ($routeProvider) {
 
                 }, function(data, status, headers, config){
                     $cookies.remove('accessToken');
-                    $rootScope.g_logout_hide=1;
                     $rootScope.email = '';
                     $location.path('/');
                     $log.log('error'); 
@@ -90,9 +70,8 @@ myApp.config(function ($routeProvider) {
 
 
 
-myApp.controller('mainController', ['$scope','$http','$log','$location','$route','$rootScope', function($scope,$http,$log,$location,$route,$rootScope) {
+myApp.controller('mainController', ['$scope','$http','$log','$location','$route','$rootScope','$window', function($scope,$http,$log,$location,$route,$rootScope,$window) {
    
-    $rootScope.g_logout_hide=1;    
     $scope.hide_error=1;
     $scope.showError = false;
     $scope.email ="";
@@ -107,7 +86,7 @@ myApp.controller('mainController', ['$scope','$http','$log','$location','$route'
         var host = location.host;        
         var req = {
                     method: 'POST',
-                    url: 'https://'+ host +'/login/',
+                    url: 'http://'+ host +'/login/',
                     headers:    {
                                     'Content-Type': 'application/json'
                                 },
@@ -122,8 +101,10 @@ myApp.controller('mainController', ['$scope','$http','$log','$location','$route'
         $http(req).then(function(data, status, headers, config){
 
             $log.log('success');                
-            $rootScope.email =  $scope.email;          
-            $location.url('/workspace');            
+            $rootScope.email =  $scope.email;       
+            $log.log(data.data.message);            
+            //$window.open(data.data.message, "_blank")  
+            $window.open(data.data.message, "_self")             
 
         }, function(data, status, headers, config)
         {            
@@ -136,28 +117,11 @@ myApp.controller('mainController', ['$scope','$http','$log','$location','$route'
     
 }]);
 
-myApp.controller('workspaceController', ['$scope','$route','$log','$cookies','$window','$rootScope', function($scope,$route,$log,$cookies,$window,$rootScope) {    
- 
-
-$rootScope.g_logout_hide=0;
-
-
-$scope.Mybutton = function(){
-
-$log.log('Pressed');
-$log.log($cookies.get('accessToken'));
-$log.log('REMOVE');
-$cookies.remove('accessToken');
-$log.log($cookies.get('accessToken'));
-};
-
-
-}]);
 
 
 myApp.controller('forgotpasswordController', ['$scope','$http','$log','$rootScope','$location','$timeout', function($scope,$http,$log,$rootScope,$location,$timeout) {
   
-    $rootScope.g_logout_hide=1;
+    
     $rootScope.g_forgotpassword_success=0;
     $rootScope.g_forgotpassword_error=0;
     $scope.email ="";        
@@ -169,7 +133,7 @@ myApp.controller('forgotpasswordController', ['$scope','$http','$log','$rootScop
         var host = location.host;             
         var req = {
             method: 'POST',            
-            url: 'https://'+ host +'/forgotpassword/',
+            url: 'http://'+ host +'/forgotpassword/',
             headers: {
                         'Content-Type': 'application/json'
                     },
@@ -200,8 +164,7 @@ myApp.controller('forgotpasswordController', ['$scope','$http','$log','$rootScop
 
 
 myApp.controller('registerController', ['$scope','$route','$log','$cookies','$window','$rootScope','$http','$location','$timeout', function($scope,$route,$log,$cookies,$window,$rootScope,$http,$location,$timeout) {    
- 
-$rootScope.g_logout_hide=1;
+
 $rootScope.g_register_error=0;
 $rootScope.g_register_show=1;
 
@@ -227,7 +190,7 @@ $rootScope.g_register_show=1;
             var host = location.host;        
             var req = {
                         method: 'POST',
-                        url: 'https://'+ host +'/register/',
+                        url: 'http://'+ host +'/register/',
                         headers:    {
                                         'Content-Type': 'application/json'
                                     },

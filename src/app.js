@@ -1,6 +1,6 @@
 'use strict';
 var fs = require('fs');
-var https = require('https');
+var http = require('http');
 var jwt    = require('jsonwebtoken');
 var express = require('express');
 var bodyParser = require('body-parser');
@@ -109,11 +109,8 @@ var freeAccess = [
 ]; 
 
 
-var privateKey  = fs.readFileSync('privatekey.key', 'utf8');
-var certificate = fs.readFileSync('certificate.crt', 'utf8');
-
 var port = process.env.PORT || 8443;
-var credentials = {key: privateKey, cert: certificate};
+
 
 // create reusable transporter object using the default SMTP transport
 var transporter = nodemailer.createTransport({
@@ -146,6 +143,7 @@ app.use(function(req, res, next) {
   }
   else
   {
+      console.log(req.cookies.accessToken);
         console.log("Restricted area");        
         //if(search(TokenOnline,req.cookies.accessToken))//Search for token. if Logged and has access
         if(searchUser(LoggedUsers,{ token:req.cookies.accessToken}))//Search for token. if Logged and has access
@@ -167,16 +165,42 @@ app.use(function(req, res, next) {
         }
         else
         {
-             res.sendStatus(404);  
+            if(searchUser(LoggedUsers,{ token:req.query.id}))//Search for token. if Logged and has access
+            {
+                 console.log('first workspace');
+                 next();  
+            }
+            else
+            {
+                console.log('tokenlist');
+                res.sendStatus(404); 
+            }
+            
         }        
   }  
+});
+
+app.get('/main_chart', function(req,res) {
+    res.render('./app_chart/main_chart');
 });
 
 app.get('/', function(req,res) {
     res.render('index');
 });
 
+app.get('/code/app_chart/appcode_chart.js', function(req,res) {
+   res.sendFile(__dirname + '/private/app_chart/appcode_chart.js');
+});
+
 app.get('/workspace', function(req,res) {
+
+
+
+    res.cookie('accessToken', req.query.id , { expires: new Date(Date.now() + 900000)});// IF HTTPS put , secure: true  parameter
+    res.render('./app_chart/index2');   
+
+
+    /*
     //find on a vector the user application and return it
     var user = _.where(LoggedUsers,{ token:req.cookies.accessToken}) || [];
     if(_.isEmpty(user))//User not Found
@@ -198,6 +222,9 @@ app.get('/workspace', function(req,res) {
         }
         
     }
+    */
+
+
 });
 
 app.get('/login', function(req,res) {
@@ -262,13 +289,16 @@ app.post('/login',function(req,res){
             var newtoken = jwt.sign({
                      username: user[0].username,
                      application: user[0].application
-            }, configParameter.secret , { expiresIn: '1m' });
+            }, configParameter.secret , { expiresIn: '10m' });
             
             user[0].token = newtoken;                        
                       
             LoggedUsers.push(user[0]);
-            res.cookie('accessToken', newtoken , { expires: new Date(Date.now() + 900000), secure: true });
-            res.status(200).end();                       
+            //res.cookie('accessToken', newtoken , { expires: new Date(Date.now() + 900000)});// IF HTTPS put , secure: true  parameter
+            //res.status(200).end();   
+            //res.status(200).send({ message: newtoken });
+            res.status(200).send({ message: 'http://localhost:8443/workspace?id=' + newtoken });
+            console.log("TOKEN SENT");                       
         }
         else
         {
@@ -349,7 +379,7 @@ app.post('/register',function(req,res){
         }
        
         NewUsers.push(new_user);
-        var confirmation_link = 'https://localhost:8443/confirmation/?id=' + token;
+        var confirmation_link = 'http://localhost:8443/confirmation/?id=' + token;
         // setup email data with unicode symbols
        
         fs.readFile(__dirname + '/views/email.ejs','utf8',function (err, data) {
@@ -407,6 +437,6 @@ else
 });
 
 
-var httpsServer = https.createServer(credentials, app);
+var httpServer = http.createServer(app);
 
-httpsServer.listen(port);
+httpServer.listen(port);
