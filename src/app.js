@@ -62,6 +62,34 @@ function searchUser(array,obj)
     }
 }
 
+function PopUser(array,username)
+{
+    for(var i = 0; array.length; i++) 
+    {
+        console.log('Iteration: ' + i);
+        if(array[i].username === username)
+        {   
+            console.log('User found: ' + i);
+            array = array.splice(i,1);
+            break;
+        }
+        
+    }
+}
+
+function UpdateToken(array,oldToken,newToken)
+{
+    for(var i = 0; array.length; i++) 
+    {
+        console.log('Iteration: ' + i);
+        if(array[i].token === oldToken)
+        {            
+            array[i].token = newToken;
+            break;
+        }
+        
+    }
+}
 
 function indexSearch(array,item)
 {
@@ -111,13 +139,14 @@ var freeAccess = [
 
 var port = process.env.PORT || 8443;
 
-
+//#g@a12*97H
+//datahubserver@hotmail.com
 // create reusable transporter object using the default SMTP transport
 var transporter = nodemailer.createTransport({
-    service: 'gmail',
+    service: 'hotmail',
     auth: {
-        user: 'mynodeservermail@gmail.com',
-        pass: 'mailpassword'
+        user: 'joaomarcusbacalhau@hotmail.com',
+        pass: ''
     }
 });
 
@@ -143,37 +172,50 @@ app.use(function(req, res, next) {
   }
   else
   {
-      console.log(req.cookies.accessToken);
+        console.log(LoggedUsers);
         console.log("Restricted area");        
-        //if(search(TokenOnline,req.cookies.accessToken))//Search for token. if Logged and has access
+        console.log(req.cookies);
         if(searchUser(LoggedUsers,{ token:req.cookies.accessToken}))//Search for token. if Logged and has access
         {
             console.log('User on list');
 
             try {
-                var decoded = jwt.verify(req.cookies.accessToken, configParameter.secret);
-                console.log(decoded) // bar                                 
-                var payload = jwt.decode(req.cookies.accessToken);
-                console.log(payload) // bar                 
+                var decoded = jwt.verify(req.cookies.accessToken, configParameter.secret);                              
+                var payload = jwt.decode(req.cookies.accessToken);          
+                console.log(payload);      
                 next();  
                 
             } catch(err) 
             {
+                    var remove_user = _.findWhere(LoggedUsers, {token:req.cookies.accessToken})
+                    LoggedUsers = _.without(LoggedUsers,remove_user);
                     console.log('token expired');
-                    res.sendStatus(404);  
+                    //IF LOGIN render page of token expire if not send message
+                     res.render('./main/msg_server',{label:'Warning',type:'alert alert-warning',msg:'Your login has expired. Please login again.'});
             }            
         }
         else
         {
             if(searchUser(LoggedUsers,{ token:req.query.id}))//Search for token. if Logged and has access
             {
-                 console.log('first workspace');
-                 next();  
+                try {
+                console.log('first workspace');
+
+                var decoded = jwt.verify(req.query.id, configParameter.secret);                              
+                var payload = jwt.decode(req.query.id);                
+                next();  
+                } catch(err) 
+                {
+                        var remove_user = _.findWhere(LoggedUsers, {token:req.query.id})
+                        LoggedUsers = _.without(LoggedUsers,remove_user);
+                        console.log('token expired');
+                        res.render('./main/msg_server',{label:'Warning',type:'alert alert-warning',msg:'Your login has expired. Please login again.'});
+                }  
             }
             else
             {
                 console.log('tokenlist');
-                res.sendStatus(404); 
+                res.render('./main/msg_server',{label:'Warning',type:'alert alert-warning',msg:'Somethinf went wrong. Login again please.'});
             }
             
         }        
@@ -185,7 +227,7 @@ app.get('/main_chart', function(req,res) {
 });
 
 app.get('/', function(req,res) {
-    res.render('index');
+    res.render('./main/index');
 });
 
 app.get('/code/app_chart/appcode_chart.js', function(req,res) {
@@ -194,49 +236,24 @@ app.get('/code/app_chart/appcode_chart.js', function(req,res) {
 
 app.get('/workspace', function(req,res) {
 
-
-
-    res.cookie('accessToken', req.query.id , { expires: new Date(Date.now() + 900000)});// IF HTTPS put , secure: true  parameter
+    if(req.cookies.accessToken===undefined)
+    {
+        res.cookie('accessToken', req.query.id , { expires: new Date(Date.now() + 300000)});// IF HTTPS put , secure: true  parameter
+    } 
     res.render('./app_chart/index2');   
-
-
-    /*
-    //find on a vector the user application and return it
-    var user = _.where(LoggedUsers,{ token:req.cookies.accessToken}) || [];
-    if(_.isEmpty(user))//User not Found
-    {
-        console.log('User expired');
-         res.sendStatus(404); 
-    }
-    else
-    {
-        if(user[0].application ==='msg')
-        {
-            res.render('msg',{label:'Warning',type:'alert alert-warning',msg:'The gatekeeper did not assign an application for you yet.'});
-        }
-        else
-        {
-            var app_files = './'+ user[0].application + '/' + user[0].application;
-            console.log(app_files);
-            res.render(app_files);
-        }
-        
-    }
-    */
-
 
 });
 
 app.get('/login', function(req,res) {
-    res.render('login');
+    res.render('./main/login');
 });
 
 app.get('/forgotpassword', function(req,res) {
-    res.render('forgotpassword');
+    res.render('./main/forgotpassword');
 });
 
 app.get('/register', function(req,res) {
-    res.render('register');
+    res.render('./main/register');
 });
 
 //https://localhost:8443/confirmation/?id=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiam9hbyIsImlhdCI6MTQ5NDgxNDE2Mn0.mse9BRZx-j1SXRDfeCCzwAnW-dmozeQtky7E8iGA6II
@@ -248,21 +265,21 @@ app.get('/confirmation/', function (req, res) {
     if(_.isEmpty(user))//token not found
     {
         console.log('Token not found');
-        res.render('confirmation',{type:'alert alert-danger',msg:'Your account could not be confirmed.'});
+        res.render('./email/confirmation',{type:'alert alert-danger',msg:'Your account could not be confirmed.'});
     }
     else
     {
         console.log(Date.now()-user[0].expire);
         if((Date.now()-user[0].expire)>900000)//15min
         {
-             res.render('confirmation',{type:'alert alert-danger',msg:'Your account could not be confirmed.'});
+             res.render('./email/confirmation',{type:'alert alert-danger',msg:'Your account could not be confirmed.'});
              
         }
         else
         {
             database.push(user[0]);
             console.log(database);
-            res.render('confirmation',{type:'alert alert-success',msg:'Your account is confirmed.'});
+            res.render('./email/confirmation',{type:'alert alert-success',msg:'Your account is confirmed.'});
         }
     }
     
@@ -278,31 +295,27 @@ app.post('/login',function(req,res){
     if(_.isEmpty(user))//User not Found
     {
         console.log("user not found");   
-        res.sendStatus(404);  
+        res.status(404).send({ message: 'E-mail or password not correct!' }); 
     }
     else
-    {        
-        console.log(user[0]);        
+    {              
         if(_.isEmpty(_.where(LoggedUsers,user[0])||[]))
         {
             //Generate token
             var newtoken = jwt.sign({
                      username: user[0].username,
                      application: user[0].application
-            }, configParameter.secret , { expiresIn: '10m' });
+            }, configParameter.secret , { expiresIn: '5m' });
             
-            user[0].token = newtoken;                        
-                      
+            user[0].token = newtoken;                                 
             LoggedUsers.push(user[0]);
-            //res.cookie('accessToken', newtoken , { expires: new Date(Date.now() + 900000)});// IF HTTPS put , secure: true  parameter
-            //res.status(200).end();   
-            //res.status(200).send({ message: newtoken });
             res.status(200).send({ message: 'http://localhost:8443/workspace?id=' + newtoken });
             console.log("TOKEN SENT");                       
         }
         else
         {
-            res.status(404).end(); 
+            LoggedUsers = _.without(LoggedUsers,user[0]);
+            res.status(404).send({ message: 'User already logged. Close all windows and try again.' }); 
         }       
     }
 });
@@ -317,12 +330,12 @@ app.post('/forgotpassword',function(req,res){
     if(_.isEmpty(user))//User not Found
     {
         console.log("user not found");   
-        res.sendStatus(404);    
+        res.status(404).send({ message: 'This e-mail is not registered.' }); 
     }
     else
     {        
           
-        fs.readFile(__dirname + '/views/emailRecovery.ejs','utf8',function (err, data) {
+        fs.readFile(__dirname + '/views/email/emailRecovery.ejs','utf8',function (err, data) {
             if (err) throw err;
 
             var html_string = my_ejs.render(data, { name:user[0].name,lastname:user[0].lastname,password:user[0].password});
@@ -337,7 +350,7 @@ app.post('/forgotpassword',function(req,res){
             // send mail with defined transport object
             transporter.sendMail(mailOptions, (error, info) => {
                 if (error) {
-                    res.status(404);
+                    res.status(404).send({ message: 'This e-mail could not be sent. Try again later.' });
                     return console.log(error);
                 }        
                     res.status(200).send({ message: 'email sent' });
@@ -368,7 +381,7 @@ app.post('/register',function(req,res){
             password:req.body.password,
             expire:Date.now(),
             confirmationId:token,
-            application: 'msg'
+            application: 'default'
         };
 
 
@@ -382,7 +395,7 @@ app.post('/register',function(req,res){
         var confirmation_link = 'http://localhost:8443/confirmation/?id=' + token;
         // setup email data with unicode symbols
        
-        fs.readFile(__dirname + '/views/email.ejs','utf8',function (err, data) {
+        fs.readFile(__dirname + '/views/email/email.ejs','utf8',function (err, data) {
             if (err) throw err;
 
             var html_string = my_ejs.render(data, { name:new_user.name,lastname:new_user.lastname,link:confirmation_link});
@@ -397,7 +410,7 @@ app.post('/register',function(req,res){
             // send mail with defined transport object
             transporter.sendMail(mailOptions, (error, info) => {
                 if (error) {
-                    res.status(404);
+                    res.status(404).send({ message: 'This e-mail could not be sent. Try again later.' });
                     return console.log(error);
                 }        
                     res.status(200).send({ message: 'email sent' });
@@ -413,28 +426,48 @@ app.post('/register',function(req,res){
     }
     else//user exists
     {
-        res.status(404).send({ message: 'User Already exist!' });
+        res.status(404).send({ message: 'This e-mail is already in use!' });
          console.log('user exist');
     }      
 });
 
 
-
 app.post('/logout',function(req,res){
 
-
-var remove_user = _.findWhere(LoggedUsers, {username:req.body.username})
+var remove_user = _.findWhere(LoggedUsers, {token:req.body.token})
 if(remove_user===undefined)
 {
     res.status(404).send({ message: 'User not found' });
+    console.log('user not found');
 }
 else
 {
+    console.log(LoggedUsers);
     LoggedUsers = _.without(LoggedUsers,remove_user);
     res.status(200).send({ message: 'User logged out' });
+    console.log('user logged out');
+    console.log(LoggedUsers);
 }
 
 });
+
+
+app.get('/renewaccess',function(req,res){
+
+    console.log("TOKEN RENEW");     
+    var payload = jwt.decode(req.cookies.accessToken);      
+    var newtoken = jwt.sign({
+                username: payload.username,
+                application: payload.application
+    }, configParameter.secret , { expiresIn: '5m' });
+     //UPDATE USER TOKEN ON USER LIST
+    UpdateToken(LoggedUsers,req.cookies.accessToken,newtoken);
+    res.cookie('accessToken', newtoken , { expires: new Date(Date.now() + 300000)});// IF HTTPS put , secure: true  parameter
+    res.status(200).send({ message: 'OK'});
+    
+
+});
+
 
 
 var httpServer = http.createServer(app);

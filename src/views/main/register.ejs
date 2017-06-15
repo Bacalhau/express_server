@@ -8,37 +8,37 @@
 
                         <div class="form-group">
                             <label for="inputname">Name</label>
-                            <input type="text" ng-model="name"  name="name" class="form-control" id="inputname" placeholder="Enter you first name">
+                            <input ng-disabled="g_register_lock_fields" type="text" ng-model="name"  name="name" class="form-control" id="inputname" placeholder="Enter you first name">
                         </div>
 
                          <div class="form-group">
                             <label for="inputlastname">Last name</label>
-                            <input type="text" ng-model="lastname"  name="lastname" class="form-control" id="inputlastname" placeholder="Enter yout last name">
+                            <input ng-disabled="g_register_lock_fields" type="text" ng-model="lastname"  name="lastname" class="form-control" id="inputlastname" placeholder="Enter yout last name">
                         </div>
 
                         <div class="form-group">
                             <label for="inputemail">Email</label>
-                            <input type="email" ng-model="email"  name="email" class="form-control" id="inputemail" placeholder="Enter a valid email">
+                            <input ng-disabled="g_register_lock_fields" type="email" ng-model="email"  name="email" class="form-control" id="inputemail" placeholder="Enter a valid email">
                         </div>
 
 
                         <div class="form-group">
                             <label for="inputPassword">Password</label>
-                            <input name="password" ng-model="password"  type="password" class="form-control" id="inputPassword" placeholder="Password">
+                            <input ng-disabled="g_register_lock_fields" name="password" ng-model="password"  type="password" class="form-control" id="inputPassword" placeholder="Password">
                         </div>
 
                         <div class="form-group">
                             <label for="inputPasswordCheck">Password check</label>
-                            <input name="password" ng-model="passwordcheck"  type="password" class="form-control" id="inputPasswordCheck" placeholder="Password check">
+                            <input ng-disabled="g_register_lock_fields" name="password" ng-model="passwordcheck"  type="password" class="form-control" id="inputPasswordCheck" placeholder="Password check">
                         </div>
 
                         <div class="form-group">
                             <label for="appKey">Application key</label>
-                            <input name="AppKey" ng-model="appkey"  type="text" class="form-control" id="appKey" placeholder="Enter your application key">
+                            <input ng-disabled="g_register_lock_fields" name="AppKey" ng-model="appkey"  type="text" class="form-control" id="appKey" placeholder="Enter your application key">
                         </div>
 
-                        <button type="submit" id="submit"  class="btn btn-sm btn-default">Register</button>
-                        <a href="#!/logout" role="button" class="btn btn-sm btn-default pull-right" >Back to Login</a>
+                        <button ng-disabled="g_register_lock_fields" type="submit" id="submit"  class="btn btn-sm btn-default">Register</button>
+                        <a href="#!/" role="button" class="btn btn-sm btn-default pull-right" >Back to Login</a>
                     </form>
 
 
@@ -47,6 +47,13 @@
                     <div ng-show="g_register_error" >
                         <div class="alert alert-danger" role="alert" ng-model="message">
                                 <div>{{message}}</div>
+                        </div>
+                         
+                    </div>
+
+                    <div ng-show="g_register_wait" >
+                        <div class="alert alert-info" role="alert" ng-model="message">
+                                <div>Wait while we create your account.</div>
                         </div>
                          
                     </div>
