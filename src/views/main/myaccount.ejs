@@ -1,0 +1,54 @@
+<div class="container-login">
+    <div class="col-md-4">
+        <div class="panel panel-default">
+            <div class="panel-heading"><h3 class="panel-title"><strong>My account information</strong></h3></div>
+
+                <div class="panel-body" ng-show="g_myaccount_show">
+                    <form ng-submit="submit()">
+
+                        <div class="form-group">
+                            <label for="inputname">Name</label>
+                            <input ng-disabled="g_myaccount_lock_fields" type="text" ng-model="name"  name="name" class="form-control" id="inputname" placeholder="{{g_myaccount_name}}">
+                        </div>
+`
+                         <div class="form-group">
+                            <label for="inputlastname">Last name</label>
+                            <input ng-disabled="g_myaccount_lock_fields" type="text" ng-model="lastname"  name="lastname" class="form-control" id="inputlastname" placeholder="{{g_myaccount_lastname}}">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="inputemail">Email</label>
+                            <input ng-disabled="1" type="email" ng-model="email"  name="email" class="form-control" id="inputemail" placeholder="{{g_myaccount_email}}">
+                        </div>
+
+
+                        <div class="form-group">
+                            <label for="inputPassword">Old password</label>
+                            <input ng-disabled="g_myaccount_lock_fields" name="old_password" ng-model="old_password"  type="password" class="form-control" id="inputOldPassword" placeholder="Type old password">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="inputPasswordCheck">New password</label>
+                            <input ng-disabled="g_myaccount_lock_fields" name="password" ng-model="passwordcheck"  type="password" class="form-control" id="inputNewPasswordCheck" placeholder="Password check">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="inputPasswordCheck">New password check</label>
+                            <input ng-disabled="g_myaccount_lock_fields" name="password" ng-model="passwordcheck"  type="password" class="form-control" id="inputPasswordCheck" placeholder="Password check">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="appKey">Application key</label>
+                            <input ng-disabled="1" name="AppKey" ng-model="appkey"  type="text" class="form-control" id="appKey" placeholder="{{g_myaccount_appkey}}">
+                        </div>
+
+                        <button ng-disabled="g_myaccount_lock_fields" type="submit" id="submit"  class="btn btn-sm btn-default">Save</button>
+                        <a href="#!/" role="button" class="btn btn-sm btn-default pull-right" >Back to my app</a>
+                    </form>
+
+
+                </div>
+                    
+                </div>
+        </div>
+    </div>

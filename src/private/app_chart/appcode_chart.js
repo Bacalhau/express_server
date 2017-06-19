@@ -3,7 +3,6 @@ var myApp = angular.module('myApp', ['ngRoute','ngCookies']);
 
 myApp.config(function ($routeProvider) {
     
-   
     $routeProvider
     .when('/logout', {
         resolve: {
@@ -60,10 +59,43 @@ myApp.config(function ($routeProvider) {
                     $location.path('/');
                 });
         }}
-    })       
+    })     
+    .when('/myaccount', {
+        templateUrl: './myaccount',
+        controller: 'myaccount'
+    })  
     .when('/', {
         templateUrl: './main_chart',
-        controller: 'mainController'
+        controller: 'mainController',
+        resolve: {
+            getdata: function($location,$log,$rootScope,$cookies,$http,$window){
+
+                $rootScope.data = [];
+                $rootScope.$watch('data');
+                var host = location.host;        
+                var req = {
+                        method: 'GET',
+                        url: 'http://'+ host +'/api/app_chart/',
+                        headers:{
+                            'Content-Type': 'application/json'
+                        },
+                        data:{ 
+                                
+                        }
+                }
+        
+        
+                $http(req).then(function(data, status, headers, config){
+
+                    $rootScope.data = data.data;
+                    $log.log('success');                                 
+
+                }, function(data, status, headers, config)
+                {            
+                    $log.log('error');
+                });
+            }
+        }
     });
 
     
@@ -83,92 +115,88 @@ $interval(function() {
 
 myApp.controller('mainController', ['$scope','$http','$log','$location','$route','$rootScope','$window','$cookies','$interval', function($scope,$http,$log,$location,$route,$rootScope,$window,$cookies,$interval) {
    
-
-var ctx = document.getElementById("myChart").getContext('2d');
-var ctx2 = document.getElementById("myChart2").getContext('2d');
+$rootScope.g_insert_lock_fields=0;
 
 
-var myChart = new Chart(ctx, {
-    type: 'bar',
-    data: {
-        labels: ["Red", "Blue", "Yellow", "Green", "Purple", "Orange"],
-        datasets: [{
-            label: '# of Votes',
-            data: [12, 19, 3, 5, 2, 3],
-            backgroundColor: [
-                'rgba(255, 99, 132, 0.2)',
-                'rgba(54, 162, 235, 0.2)',
-                'rgba(255, 206, 86, 0.2)',
-                'rgba(75, 192, 192, 0.2)',
-                'rgba(153, 102, 255, 0.2)',
-                'rgba(255, 159, 64, 0.2)'
-            ],
-            borderColor: [
-                'rgba(255,99,132,1)',
-                'rgba(54, 162, 235, 1)',
-                'rgba(255, 206, 86, 1)',
-                'rgba(75, 192, 192, 1)',
-                'rgba(153, 102, 255, 1)',
-                'rgba(255, 159, 64, 1)'
-            ],
-            borderWidth: 1
-        }]
-    },
-    options: {
-        responsive: false, 
-        maintainAspectRatio: false,
-        scales: {
-            yAxes: [{
-                ticks: {
-                    beginAtZero:true
+$scope.remove = function (task_id){
+
+$log.log('Remove Task: ' + task_id);    
+        var host = location.host;        
+        var req = {
+                    method: 'POST',
+                    url: 'http://'+ host +'/api/app_chart/',
+                    headers:    {
+                                    'Content-Type': 'application/json'
+                                },
+                    data:       { 
+                                    type:'remove',
+                                    remove_task:task_id
+                                }
                 }
-            }]
-        }
-    }
-});
+        
+        
+        $http(req).then(function(data, status, headers, config){
+
+            $log.log('success');           
+            $route.reload();                 
+
+        }, function(data, status, headers, config)
+        {            
+              $log.log('error');
+        });
+
+}
+    
 
 
-var myChart2 = new Chart(ctx2, {
-    type: 'bar',
-    data: {
-        labels: ["Red", "Blue", "Yellow", "Green", "Purple", "Orange"],
-        datasets: [{
-            label: '# of Votes',
-            data: [12, 19, 3, 5, 2, 3],
-            backgroundColor: [
-                'rgba(255, 99, 132, 0.2)',
-                'rgba(54, 162, 235, 0.2)',
-                'rgba(255, 206, 86, 0.2)',
-                'rgba(75, 192, 192, 0.2)',
-                'rgba(153, 102, 255, 0.2)',
-                'rgba(255, 159, 64, 0.2)'
-            ],
-            borderColor: [
-                'rgba(255,99,132,1)',
-                'rgba(54, 162, 235, 1)',
-                'rgba(255, 206, 86, 1)',
-                'rgba(75, 192, 192, 1)',
-                'rgba(153, 102, 255, 1)',
-                'rgba(255, 159, 64, 1)'
-            ],
-            borderWidth: 1
-        }]
-    },
-    options: {
-        responsive: false, 
-        maintainAspectRatio: false,
-        scales: {
-            yAxes: [{
-                ticks: {
-                    beginAtZero:true
+
+$scope.submit = function(form) {    
+    $rootScope.g_insert_lock_fields=1;      
+        var host = location.host;        
+        var req = {
+                    method: 'POST',
+                    url: 'http://'+ host +'/api/app_chart/',
+                    headers:    {
+                                    'Content-Type': 'application/json'
+                                },
+                    data:       { 
+                                    type:'add',
+                                    new_task:$scope.task
+                                }
                 }
-            }]
-        }
-    }
-});
+        
+        
+        $http(req).then(function(data, status, headers, config){
 
+            $log.log('success');          
+            $rootScope.g_insert_lock_fields=0;   
+            $route.reload();                 
 
+        }, function(data, status, headers, config)
+        {            
+              $log.log('error');
+              $rootScope.g_insert_lock_fields=0;  
+        });
+    }    
 
     
 }]);
 
+
+myApp.controller('myaccount', ['$scope','$http','$log','$location','$route','$rootScope','$window','$cookies','$interval', function($scope,$http,$log,$location,$route,$rootScope,$window,$cookies,$interval){
+
+$rootScope.g_myaccount_lock_fields=0;
+$rootScope.g_myaccount_show=1;
+
+$scope.g_myaccount_name = "name";
+$scope.g_myaccount_lastname = "lastname";
+$scope.g_myaccount_email = "email";
+$scope.g_myaccount_oldpassword = "";
+$scope.g_myaccount_newpassword = "";
+$scope.g_myaccount_newpasswordcheck = "";
+$scope.g_myaccount_appkey = "";
+
+
+
+
+}]);

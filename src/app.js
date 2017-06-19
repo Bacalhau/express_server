@@ -9,6 +9,7 @@ var _ = require('underscore');
 var configParameter =require('./config.js');
 var nodemailer = require('nodemailer');
 var my_ejs = require('ejs');
+var mysql = require('mysql');
 
 
 function getDateTime_email() {
@@ -103,24 +104,8 @@ function indexSearch(array,item)
     return undefined;
 }
 
-
 var NewUsers = [];
 var LoggedUsers = [];
-
-var database = [
-    {   
-        username:"gatekeeper@datahub",
-        password:"joao",
-        application: 'admin'        
-    },
-    {   
-        username:"baca@baca",
-        password:"baca",
-        application: 'app1',        
-    }
-
-];
-
 
 var freeAccess = [
     '/',
@@ -136,7 +121,16 @@ var freeAccess = [
     '/logout/'
 ]; 
 
+//MySQL database connection
+var pool  = mysql.createPool({
+  connectionLimit : 10,
+  host            : 'localhost',
+  user            : 'bacalhau',
+  password        : '123456',
+  database        : 'datahub'
+});
 
+console.log('MySQL Pool created!');
 var port = process.env.PORT || 8443;
 
 //#g@a12*97H
@@ -160,62 +154,58 @@ app.use('/assets', express.static(__dirname + '/public'));
 
 app.use(bodyParser.json());       // to support JSON-encoded bodies
 app.use(bodyParser.urlencoded({     // to support URL-encoded bodies
-  extended: true
+    extended: true
 })); 
 
 app.use(function(req, res, next) {  
-  console.log("MIDDLEWAR - Requested path: " + req.path);  
-  if (search(freeAccess,req.path)) 
-  {
+    console.log("MIDDLEWAR - Requested path: " + req.path);  
+    if(search(freeAccess,req.path)) 
+    {
         console.log("ON FREE ACCESS LIST");
         next();        
-  }
-  else
-  {
-        console.log(LoggedUsers);
-        console.log("Restricted area");        
-        console.log(req.cookies);
-        if(searchUser(LoggedUsers,{ token:req.cookies.accessToken}))//Search for token. if Logged and has access
+    }
+    else
+    {
+        console.log("Restricted area - Logged users: ");      
+        console.log(LoggedUsers); 
+        if(searchUser(LoggedUsers,{token:req.cookies.accessToken}))//Search for token. if Logged and has access
         {
             console.log('User on list');
 
             try {
                 var decoded = jwt.verify(req.cookies.accessToken, configParameter.secret);                              
-                var payload = jwt.decode(req.cookies.accessToken);          
-                console.log(payload);      
+                var payload = jwt.decode(req.cookies.accessToken);             
                 next();  
-                
             } catch(err) 
             {
                     var remove_user = _.findWhere(LoggedUsers, {token:req.cookies.accessToken})
                     LoggedUsers = _.without(LoggedUsers,remove_user);
-                    console.log('token expired');
+                    console.log('Token expired');
                     //IF LOGIN render page of token expire if not send message
                      res.render('./main/msg_server',{label:'Warning',type:'alert alert-warning',msg:'Your login has expired. Please login again.'});
             }            
         }
         else
         {
-            if(searchUser(LoggedUsers,{ token:req.query.id}))//Search for token. if Logged and has access
+            if(searchUser(LoggedUsers,{token:req.query.id}))//Search for token. if Logged and has access
             {
                 try {
-                console.log('first workspace');
-
-                var decoded = jwt.verify(req.query.id, configParameter.secret);                              
-                var payload = jwt.decode(req.query.id);                
-                next();  
+                    console.log('First workspace request.');
+                    var decoded = jwt.verify(req.query.id, configParameter.secret);                              
+                    var payload = jwt.decode(req.query.id);                
+                    next();  
                 } catch(err) 
                 {
-                        var remove_user = _.findWhere(LoggedUsers, {token:req.query.id})
-                        LoggedUsers = _.without(LoggedUsers,remove_user);
-                        console.log('token expired');
-                        res.render('./main/msg_server',{label:'Warning',type:'alert alert-warning',msg:'Your login has expired. Please login again.'});
+                    var remove_user = _.findWhere(LoggedUsers, {token:req.query.id})
+                    LoggedUsers = _.without(LoggedUsers,remove_user);
+                    console.log('Token expired');
+                    res.render('./main/msg_server',{label:'Warning',type:'alert alert-warning',msg:'Your login has expired. Please login again.'});
                 }  
             }
             else
             {
-                console.log('tokenlist');
-                res.render('./main/msg_server',{label:'Warning',type:'alert alert-warning',msg:'Somethinf went wrong. Login again please.'});
+                console.log('Tokenlist');
+                res.render('./main/msg_server',{label:'Warning',type:'alert alert-warning',msg:'Something went wrong. Login again please.'});
             }
             
         }        
@@ -230,6 +220,10 @@ app.get('/', function(req,res) {
     res.render('./main/index');
 });
 
+app.get('/myaccount', function(req,res) {
+    res.render('./main/myaccount');
+});
+
 app.get('/code/app_chart/appcode_chart.js', function(req,res) {
    res.sendFile(__dirname + '/private/app_chart/appcode_chart.js');
 });
@@ -241,7 +235,6 @@ app.get('/workspace', function(req,res) {
         res.cookie('accessToken', req.query.id , { expires: new Date(Date.now() + 300000)});// IF HTTPS put , secure: true  parameter
     } 
     res.render('./app_chart/index2');   
-
 });
 
 app.get('/login', function(req,res) {
@@ -258,10 +251,11 @@ app.get('/register', function(req,res) {
 
 //https://localhost:8443/confirmation/?id=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiam9hbyIsImlhdCI6MTQ5NDgxNDE2Mn0.mse9BRZx-j1SXRDfeCCzwAnW-dmozeQtky7E8iGA6II
 app.get('/confirmation/', function (req, res) {
-  console.log('confirmation link');
-  console.log(req.query);
+    
+    console.log('Confirmation link');
+    console.log(req.query);
 
-   var user = _.where(NewUsers,{ confirmationId:req.query.id}) || [];
+    var user = _.where(NewUsers,{ confirmationId:req.query.id}) || [];
     if(_.isEmpty(user))//token not found
     {
         console.log('Token not found');
@@ -270,54 +264,90 @@ app.get('/confirmation/', function (req, res) {
     else
     {
         console.log(Date.now()-user[0].expire);
-        if((Date.now()-user[0].expire)>900000)//15min
+        if((Date.now()-user[0].expire)>900000)//15min-900000
         {
-             res.render('./email/confirmation',{type:'alert alert-danger',msg:'Your account could not be confirmed.'});
-             
+            console.log('Token expired. Removing from NewUsers List');
+            NewUsers = _.without(NewUsers,user[0]);
+            console.log('NewUsers List:');
+            console.log(NewUsers);
+            res.render('./email/confirmation',{type:'alert alert-danger',msg:'Your account could not be confirmed.'}); 
         }
         else
         {
-            database.push(user[0]);
-            console.log(database);
+            var insert_vector = [user[0].name,user[0].lastname,user[0].username,user[0].password,user[0].application];
+            console.log(insert_vector);
+            pool.getConnection(function(err, connection) {
+                // Use the connection 
+                if (err) throw err;
+                console.log('Going to DataBase.');
+                connection.query("INSERT INTO Usuario (uname, ulastname, username, pass, application) VALUES (?,?,?,?,?)",insert_vector,function (error, results, fields) 
+                {
+                    if (error) throw error;
+                    if(_.isEmpty(results))
+                    {
+                        console.log('Not Insert');
+                    }
+                    else
+                    {
+                        console.log('The result is: ', results);
+                    }
+                });
+                connection.release();
+                if (err) throw err;
+            });
             res.render('./email/confirmation',{type:'alert alert-success',msg:'Your account is confirmed.'});
         }
     }
-    
-   
 });
 
 
 app.post('/login',function(req,res){
 
     console.log("POST RECEIVED");
-    var user = _.where(database,{ username:req.body.username,password:req.body.password }) || [];
- 
-    if(_.isEmpty(user))//User not Found
-    {
-        console.log("user not found");   
-        res.status(404).send({ message: 'E-mail or password not correct!' }); 
-    }
-    else
-    {              
-        if(_.isEmpty(_.where(LoggedUsers,user[0])||[]))
+    pool.getConnection(function(err, connection) {
+        // Use the connection 
+        if (err) throw err;
+        console.log('Going to DataBase.');
+        connection.query("SELECT * FROM Usuario WHERE username=?",req.body.username ,function (error, results, fields) 
         {
-            //Generate token
-            var newtoken = jwt.sign({
-                     username: user[0].username,
-                     application: user[0].application
-            }, configParameter.secret , { expiresIn: '5m' });
-            
-            user[0].token = newtoken;                                 
-            LoggedUsers.push(user[0]);
-            res.status(200).send({ message: 'http://localhost:8443/workspace?id=' + newtoken });
-            console.log("TOKEN SENT");                       
-        }
-        else
-        {
-            LoggedUsers = _.without(LoggedUsers,user[0]);
-            res.status(404).send({ message: 'User already logged. Close all windows and try again.' }); 
-        }       
-    }
+            if (error) throw error;
+            if(_.isEmpty(results))
+            {
+                console.log("user not found");   
+                res.status(404).send({ message: 'E-mail or password not correct!' });
+            }
+            else
+            {
+                console.log('The result is: ', results);
+                if(req.body.password === results[0].pass)
+                {
+                    console.log('PASSWORD CORRECT');
+                    if(_.isEmpty(_.where(LoggedUsers,results[0])||[]))
+                    {
+                        //Generate token
+                        var newtoken = jwt.sign({
+                                username: results[0].username,
+                                application: results[0].application
+                        }, configParameter.secret , { expiresIn: '5m' });
+                        
+                        results[0].token = newtoken;                                 
+                        LoggedUsers.push(results[0]);
+                        res.status(200).send({ message: 'http://localhost:8443/workspace?id=' + newtoken });
+                        console.log("TOKEN SENT");                       
+                    }
+                    else
+                    {
+                        console.log('User already looged');
+                        PopUser(LoggedUsers,results[0].username);
+                        console.log(LoggedUsers);
+                        res.status(404).send({ message: 'User already logged. Close all windows and try again.' }); 
+                    }   
+                }
+            }
+        });
+        connection.release();
+        if (err) throw err;
+    });
 });
 
 app.post('/forgotpassword',function(req,res){
@@ -325,130 +355,139 @@ app.post('/forgotpassword',function(req,res){
     console.log("POST RECEIVED PASSWORD FORGOT");
     console.log(req.body.username);
 
-    var user = _.where(database,{ username:req.body.username}) || [];
- 
-    if(_.isEmpty(user))//User not Found
-    {
-        console.log("user not found");   
-        res.status(404).send({ message: 'This e-mail is not registered.' }); 
-    }
-    else
-    {        
-          
-        fs.readFile(__dirname + '/views/email/emailRecovery.ejs','utf8',function (err, data) {
-            if (err) throw err;
+    pool.getConnection(function(err, connection) {
+        // Use the connection 
+        if (err) throw err;
+        console.log('Going to DataBase');
+        connection.query("SELECT * FROM Usuario WHERE username=?",req.body.username ,function (error, results, fields) 
+        {
+            if (error) throw error;
+            if(_.isEmpty(results))
+            {
+                console.log("user not found");   
+                res.status(404).send({ message: 'This e-mail is not registered.' }); 
+            }
+            else
+            {
+                console.log('The result is: ', results);
+                fs.readFile(__dirname + '/views/email/emailRecovery.ejs','utf8',function (err, data) {
+                    if (err) throw err;
 
-            var html_string = my_ejs.render(data, { name:user[0].name,lastname:user[0].lastname,password:user[0].password});
-            console.log(html_string);
-            var mailOptions = {
-                from: '"DataHub" <mynodeservermail@gmail.com>', // sender address
-                to: user[0].username, // list of receivers
-                subject: 'Password Recovery', // Subject line
-                html: html_string
-            };
+                    var html_string = my_ejs.render(data, { name:results[0].uname,lastname:results[0].ulastname,password:results[0].pass});
+                    console.log(html_string);
+                    var mailOptions = {
+                        from: '"DataHub" <mynodeservermail@gmail.com>', // sender address
+                        to: results[0].username, // list of receivers
+                        subject: 'Password Recovery', // Subject line
+                        html: html_string
+                    };
 
-            // send mail with defined transport object
-            transporter.sendMail(mailOptions, (error, info) => {
-                if (error) {
-                    res.status(404).send({ message: 'This e-mail could not be sent. Try again later.' });
-                    return console.log(error);
-                }        
-                    res.status(200).send({ message: 'email sent' });
-                    console.log('email sent');
-                console.log('Message %s sent: %s', info.messageId, info.response);
-            });
-
-                
-            });    
-    }
-
+                    // send mail with defined transport object
+                    transporter.sendMail(mailOptions, (error, info) => {
+                        if (error) {
+                            res.status(404).send({ message: 'This e-mail could not be sent. Try again later.' });
+                            return console.log(error);
+                        }        
+                            res.status(200).send({ message: 'email sent' });
+                            console.log('email sent');
+                        console.log('Message %s sent: %s', info.messageId, info.response);
+                    });                
+                }); 
+            }
+        });            
+        connection.release();
+        if (err) throw err;
+    });
 });
 
 
 app.post('/register',function(req,res){
     console.log(req.body);
-    var user = _.where(database,{ username:req.body.username}) || [];
-    if(_.isEmpty(user))//User not Found can be created
-    {   
-
-        var token = jwt.sign({ user: req.body.name }, 'confirmationId');
-        var app_req = _.where(configParameter.applications,{ key:req.body.appkey}) || [];
-
-        var new_user = {
-            name:req.body.name,
-            lastname:req.body.lastname,
-            username:req.body.username,
-            password:req.body.password,
-            expire:Date.now(),
-            confirmationId:token,
-            application: 'default'
-        };
-
-
-        if((_.isEmpty(app_req))===false)
+    pool.getConnection(function(err, connection) {
+        // Use the connection 
+        if (err) throw err;
+        console.log('Going to DataBase.');
+        connection.query("SELECT * FROM Usuario WHERE username=?",req.body.username ,function (error, results, fields) 
         {
-            new_user.application = app_req.name;
-            console.log('Application Found')
-        }
-       
-        NewUsers.push(new_user);
-        var confirmation_link = 'http://localhost:8443/confirmation/?id=' + token;
-        // setup email data with unicode symbols
-       
-        fs.readFile(__dirname + '/views/email/email.ejs','utf8',function (err, data) {
-            if (err) throw err;
+            if (error) throw error;
+            if(_.isEmpty(results))
+            {
+                console.log('User Free');
+                var token = jwt.sign({ user: req.body.name }, 'confirmationId');
+                var app_req = _.where(configParameter.applications,{ key:req.body.appkey}) || [];
 
-            var html_string = my_ejs.render(data, { name:new_user.name,lastname:new_user.lastname,link:confirmation_link});
-            console.log(html_string);
-            var mailOptions = {
-                from: '"DataHub" <mynodeservermail@gmail.com>', // sender address
-                to: new_user.username, // list of receivers
-                subject: 'DataHub Registration', // Subject line
-                html: html_string
-            };
+                var new_user = {
+                    name:req.body.name,
+                    lastname:req.body.lastname,
+                    username:req.body.username,
+                    password:req.body.password,
+                    expire:Date.now(),
+                    confirmationId:token,
+                    application: 'default'
+                };
 
-            // send mail with defined transport object
-            transporter.sendMail(mailOptions, (error, info) => {
-                if (error) {
-                    res.status(404).send({ message: 'This e-mail could not be sent. Try again later.' });
-                    return console.log(error);
-                }        
-                    res.status(200).send({ message: 'email sent' });
-                    console.log('email sent');
-                console.log('Message %s sent: %s', info.messageId, info.response);
-            });
 
-                
-            });
-        
+                if((_.isEmpty(app_req))===false)
+                {
+                    new_user.application = app_req.name;
+                    console.log('Application Found')
+                }
+            
+                NewUsers.push(new_user);
+                var confirmation_link = 'http://localhost:8443/confirmation/?id=' + token;
+                // setup email data with unicode symbols
+            
+                fs.readFile(__dirname + '/views/email/email.ejs','utf8',function (err, data) {
+                    if (err) throw err;
 
-        
-    }
-    else//user exists
-    {
-        res.status(404).send({ message: 'This e-mail is already in use!' });
-         console.log('user exist');
-    }      
+                    var html_string = my_ejs.render(data, { name:new_user.name,lastname:new_user.lastname,link:confirmation_link});
+                    console.log(html_string);
+                    var mailOptions = {
+                        from: '"DataHub" <mynodeservermail@gmail.com>', // sender address
+                        to: new_user.username, // list of receivers
+                        subject: 'DataHub Registration', // Subject line
+                        html: html_string
+                    };
+                    // send mail with defined transport object
+                    transporter.sendMail(mailOptions, (error, info) => {
+                        if (error) {
+                            res.status(404).send({ message: 'This e-mail could not be sent. Try again later.' });
+                            return console.log(error);
+                        }        
+                            res.status(200).send({ message: 'email sent' });
+                            console.log('email sent');
+                        console.log('Message %s sent: %s', info.messageId, info.response);
+                    });                        
+                });
+            }
+            else
+            {
+                res.status(404).send({ message: 'This e-mail is already in use!' });
+                console.log('user exist');
+            }
+        });
+        connection.release();
+        if (err) throw err;
+    });
 });
 
 
 app.post('/logout',function(req,res){
 
-var remove_user = _.findWhere(LoggedUsers, {token:req.body.token})
-if(remove_user===undefined)
-{
-    res.status(404).send({ message: 'User not found' });
-    console.log('user not found');
-}
-else
-{
-    console.log(LoggedUsers);
-    LoggedUsers = _.without(LoggedUsers,remove_user);
-    res.status(200).send({ message: 'User logged out' });
-    console.log('user logged out');
-    console.log(LoggedUsers);
-}
-
+    var remove_user = _.findWhere(LoggedUsers, {token:req.body.token})
+    if(remove_user===undefined)
+    {
+        res.status(404).send({ message: 'User not found' });
+        console.log('user not found');
+    }
+    else
+    {
+        console.log(LoggedUsers);
+        PopUser(LoggedUsers,remove_user.username);
+        res.status(200).send({ message: 'User logged out' });
+        console.log('user logged out');
+        console.log(LoggedUsers);
+    }
 });
 
 
@@ -463,13 +502,107 @@ app.get('/renewaccess',function(req,res){
      //UPDATE USER TOKEN ON USER LIST
     UpdateToken(LoggedUsers,req.cookies.accessToken,newtoken);
     res.cookie('accessToken', newtoken , { expires: new Date(Date.now() + 300000)});// IF HTTPS put , secure: true  parameter
-    res.status(200).send({ message: 'OK'});
+    res.status(200).send({message: 'OK'});
+});
+
+
+app.get('/api/app_chart',function(req,res){
+
+    console.log("API GET");     
+    var data_user = _.findWhere(LoggedUsers, {token:req.cookies.accessToken});
+     console.log(data_user);
+    //console.log(data_user);
     
+    pool.getConnection(function(err, connection) {
+        // Use the connection 
+        if (err) throw err;
+        console.log('Going to DataBase');
+        connection.query("SELECT * FROM Tarefas WHERE TaskOwner=?",data_user.id,function (error, results, fields) 
+        {
+            if (error) throw error;
+            if(_.isEmpty(results))
+            {
+                console.log("No task for user");   
+                res.status(404).send({ message: 'This e-mail is not registered.' }); 
+            }
+            else
+            {
+                //console.log('The result is: ', results);
+                res.setHeader('Content-Type', 'application/json');
+                res.status(200).send(JSON.stringify(results));
+            }
+        });            
+        connection.release();
+        if (err) throw err;
+    });
+    
+});
+
+
+app.post('/api/app_chart',function(req,res){
+
+    console.log("API POST");     
+    var data_user = _.findWhere(LoggedUsers, {token:req.cookies.accessToken});
+
+    if(req.body.type === 'add')
+    {
+        pool.getConnection(function(err, connection) {
+        // Use the connection 
+        if (err) throw err; 
+        console.log('Going to DataBase');
+        var insert_vector = [data_user.id,req.body.new_task];
+        connection.query("INSERT INTO Tarefas (TaskOwner, tarefa) VALUES (?,?)",insert_vector,function (error, results, fields) 
+        {
+            if (error) throw error;
+            if(_.isEmpty(results))
+            {
+                console.log("Can not insert");   
+                res.status(404).send({ message: 'Error on insert task' }); 
+            }
+            else
+            {
+                res.status(200).send({ message: 'Insert OK' }); 
+            }
+        });            
+        connection.release();
+        if (err) throw err;
+        });
+
+    }
+    else if (req.body.type === 'remove')
+    {
+        pool.getConnection(function(err, connection) {
+        // Use the connection 
+        if (err) throw err; 
+        console.log('Going to DataBase');
+        connection.query("DELETE FROM Tarefas WHERE id=?",req.body.remove_task,function (error, results, fields) 
+        {
+            if (error) throw error;
+            if(_.isEmpty(results))
+            {
+                console.log("Can not delete");   
+                res.status(404).send({ message: 'Error on delete task' }); 
+            }
+            else
+            {
+                res.status(200).send({ message: 'delete OK' }); 
+            }
+        });            
+        connection.release();
+        if (err) throw err;
+        });
+
+    }
+    else
+    {   
+        console.log("Type error");   
+        res.status(404).send({ message: 'Error on type' }); 
+    }
+
+
 
 });
 
 
-
 var httpServer = http.createServer(app);
-
 httpServer.listen(port);
