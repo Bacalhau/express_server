@@ -1,8 +1,11 @@
-   <form ng-submit="submit()">
-                <div class="form-group">
-                    <input required ng-disabled="g_insert_lock_fields" name="task" ng-model="task"  type="text" class="form-control" id="task" placeholder="Type your task here.">
+   <form  class="form-horizontal" ng-submit="submit()">
+                <div style="padding-left:15px" class="form-group ">       
+                        <input style="width: 80%;" required ng-disabled="g_insert_lock_fields" maxlength="100" name="task" ng-model="task"  type="text" class="form-control"  id="task" placeholder="Type your task here.">                   
                 </div>
-            <button type="submit" id="submit"  class="btn btn-sm btn-default" ng-disabled="g_insert_lock_fields">Insert</button>
+                 <div style="padding-left:15px" class="form-group">
+                        <input  style="width: 20%;" required ng-disabled="g_insert_lock_fields" type="date" name="due" ng-model="due" class="form-control" id="due" >     
+                 </div>
+            <button  style="width: 20%;" type="submit" id="submit"  class="btn btn-sm btn-default" ng-disabled="g_insert_lock_fields">Insert</button>
     </form>
 
 <hr/> 
@@ -11,7 +14,7 @@
     <div style="width: 95%;" ng-controller="mainController">
     <ul class="list-group">
         <li class="list-group-item list-group-item-info" ng-repeat="task in data">
-        {{task.id}} | {{task.tarefa}} <a ng-click="remove(task.id)">Delete</a>
+         ID: {{task.id}} |   {{task.tarefa}} <a style="float: right; cursor: pointer; cursor: hand;" ng-click="remove(task.id)">Delete</a>
         </li>
         <li  class="list-group-item" ng-if="results.length === 0">
         <strong>No results found...</strong>

@@ -4,6 +4,14 @@ var myApp = angular.module('myApp', ['ngRoute','ngCookies']);
 myApp.config(function ($routeProvider) {
     
     $routeProvider
+    .when('/404', {
+        templateUrl: './404',
+        resolve: {
+            message: function($location,$log,$rootScope,$cookies,$http,$window){       
+              $log.log('Resolve 404');             
+              $cookies.remove('accessToken');
+        }}
+    })
     .when('/logout', {
         resolve: {
             message: function($location,$log,$rootScope,$cookies,$http,$window){                  
@@ -39,6 +47,7 @@ myApp.config(function ($routeProvider) {
         resolve: {
             message: function($location,$log,$rootScope,$cookies,$http,$window){                  
                $log.log('fnc - Renew Access');          
+               $log.log($cookies.get('accessToken'));  
                 var host = location.host;  
                 var req = {
                     method: 'GET',            
@@ -62,7 +71,35 @@ myApp.config(function ($routeProvider) {
     })     
     .when('/myaccount', {
         templateUrl: './myaccount',
-        controller: 'myaccount'
+        controller: 'myaccount',
+        resolve: {
+            getdata: function($location,$log,$rootScope,$cookies,$http,$window){
+
+                $rootScope.data = [];
+                var host = location.host;        
+                var req = {
+                        method: 'GET',
+                        url: 'http://'+ host +'/api/userinfo/',
+                        headers:{
+                            'Content-Type': 'application/json'
+                        },
+                        data:{ 
+                                
+                        }
+                }
+        
+        
+                $http(req).then(function(data, status, headers, config){
+                    $rootScope.MyUser = data.data.userinfo;      
+                    $log.log('success');                             
+
+                }, function(data, status, headers, config)
+                {            
+                    $log.log('error');
+                    $location.path('/404');
+                });
+            }
+        }
     })  
     .when('/', {
         templateUrl: './main_chart',
@@ -93,6 +130,7 @@ myApp.config(function ($routeProvider) {
                 }, function(data, status, headers, config)
                 {            
                     $log.log('error');
+                    $location.path('/404');
                 });
             }
         }
@@ -143,6 +181,7 @@ $log.log('Remove Task: ' + task_id);
         }, function(data, status, headers, config)
         {            
               $log.log('error');
+              $location.path('/404');
         });
 
 }
@@ -151,7 +190,8 @@ $log.log('Remove Task: ' + task_id);
 
 
 $scope.submit = function(form) {    
-    $rootScope.g_insert_lock_fields=1;      
+    $rootScope.g_insert_lock_fields=1;   
+    $log.log($scope.due);   
         var host = location.host;        
         var req = {
                     method: 'POST',
@@ -161,7 +201,8 @@ $scope.submit = function(form) {
                                 },
                     data:       { 
                                     type:'add',
-                                    new_task:$scope.task
+                                    new_task:$scope.task,
+                                    task_due:$scope.due
                                 }
                 }
         
@@ -175,7 +216,7 @@ $scope.submit = function(form) {
         }, function(data, status, headers, config)
         {            
               $log.log('error');
-              $rootScope.g_insert_lock_fields=0;  
+              $location.path('/404');
         });
     }    
 
@@ -188,13 +229,52 @@ myApp.controller('myaccount', ['$scope','$http','$log','$location','$route','$ro
 $rootScope.g_myaccount_lock_fields=0;
 $rootScope.g_myaccount_show=1;
 
-$scope.g_myaccount_name = "name";
-$scope.g_myaccount_lastname = "lastname";
-$scope.g_myaccount_email = "email";
-$scope.g_myaccount_oldpassword = "";
-$scope.g_myaccount_newpassword = "";
-$scope.g_myaccount_newpasswordcheck = "";
-$scope.g_myaccount_appkey = "";
+
+$log.log($rootScope.MyUser);
+$scope.name = $rootScope.MyUser.name;
+$scope.lastname = $rootScope.MyUser.lastname;
+$scope.email = $rootScope.MyUser.username;
+$scope.old_password = "";
+$scope.new_password = "";
+$scope.new_passwordcheck = "";
+$scope.appkey = $rootScope.MyUser.app;
+
+
+
+
+$scope.submit = function(form) {    
+    $rootScope.g_insert_lock_fields=1;      
+        var host = location.host;        
+        var req = {
+                    method: 'POST',
+                    url: 'http://'+ host +'/api/userinfo/',
+                    headers:    {
+                                    'Content-Type': 'application/json'
+                                },
+                    data:       { 
+                                    type:"modify",
+                                    uname:$scope.name,
+                                    ulastname:$scope.lastname,
+                                    oldpassword:$scope.old_password,
+                                    new_password:$scope.new_password,
+                                    new_passwordcheck:$scope.new_passwordcheck
+                                }
+                }
+        
+        
+        $http(req).then(function(data, status, headers, config){
+
+                     
+            $route.reload();     
+            $log.log('success');              
+
+        }, function(data, status, headers, config)
+        {            
+              $log.log('error');
+              $location.path('/404');
+        });
+}    
+
 
 
 

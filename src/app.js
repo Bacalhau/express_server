@@ -12,6 +12,21 @@ var my_ejs = require('ejs');
 var mysql = require('mysql');
 
 
+function encrypt(text){
+  var cipher = crypto.createCipher(configParameter.algorithm,configParameter.password);
+  var crypted = cipher.update(text,'utf8','hex');
+  crypted += cipher.final('hex');
+  return crypted;
+}
+ 
+function decrypt(text){
+  var decipher = crypto.createDecipher(configParameter.algorithm,configParameter.password);
+  var dec = decipher.update(text,'hex','utf8');
+  dec += decipher.final('utf8');
+  return dec;
+}
+
+
 function getDateTime_email() {
 
     var date = new Date();
@@ -118,7 +133,8 @@ var freeAccess = [
     '/register',
     '/confirmation/',
     '/logout',
-    '/logout/'
+    '/logout/',
+    '/404'
 ]; 
 
 //MySQL database connection
@@ -140,7 +156,7 @@ var transporter = nodemailer.createTransport({
     service: 'hotmail',
     auth: {
         user: 'joaomarcusbacalhau@hotmail.com',
-        pass: ''
+        pass: 'Joe&CaK7883578!'
     }
 });
 
@@ -182,7 +198,7 @@ app.use(function(req, res, next) {
                     LoggedUsers = _.without(LoggedUsers,remove_user);
                     console.log('Token expired');
                     //IF LOGIN render page of token expire if not send message
-                     res.render('./main/msg_server',{label:'Warning',type:'alert alert-warning',msg:'Your login has expired. Please login again.'});
+                    res.status(404).send({ message:'Your login has expired. Please login again.'});
             }            
         }
         else
@@ -199,13 +215,13 @@ app.use(function(req, res, next) {
                     var remove_user = _.findWhere(LoggedUsers, {token:req.query.id})
                     LoggedUsers = _.without(LoggedUsers,remove_user);
                     console.log('Token expired');
-                    res.render('./main/msg_server',{label:'Warning',type:'alert alert-warning',msg:'Your login has expired. Please login again.'});
+                    res.status(404).send({ message:'Your login has expired. Please login again.'});
                 }  
             }
             else
             {
                 console.log('Tokenlist');
-                res.render('./main/msg_server',{label:'Warning',type:'alert alert-warning',msg:'Something went wrong. Login again please.'});
+                res.status(404).send({ message:'Something went wrong. Login again please.'});
             }
             
         }        
@@ -240,6 +256,11 @@ app.get('/workspace', function(req,res) {
 app.get('/login', function(req,res) {
     res.render('./main/login');
 });
+
+app.get('/404', function(req,res) {
+        res.render('./main/msg_server',{label:'Warning',type:'alert alert-warning',msg:'Something went wrong. Login again please.'});
+});
+
 
 app.get('/forgotpassword', function(req,res) {
     res.render('./main/forgotpassword');
@@ -342,6 +363,10 @@ app.post('/login',function(req,res){
                         console.log(LoggedUsers);
                         res.status(404).send({ message: 'User already logged. Close all windows and try again.' }); 
                     }   
+                }
+                else
+                {
+                    res.status(404).send({ message: 'E-mail or password not correct!' });
                 }
             }
         });
@@ -490,6 +515,13 @@ app.post('/logout',function(req,res){
     }
 });
 
+function TimeExpire()
+{
+
+var expire = new Date(Date.now() + 300000);
+var stringtime = expire.getHours() + ":" + expire.getMinutes() + ":" + expire.getSeconds();
+return stringtime.toString().split(":");;
+}
 
 app.get('/renewaccess',function(req,res){
 
@@ -501,7 +533,8 @@ app.get('/renewaccess',function(req,res){
     }, configParameter.secret , { expiresIn: '5m' });
      //UPDATE USER TOKEN ON USER LIST
     UpdateToken(LoggedUsers,req.cookies.accessToken,newtoken);
-    res.cookie('accessToken', newtoken , { expires: new Date(Date.now() + 300000)});// IF HTTPS put , secure: true  parameter
+    res.cookie('accessToken', newtoken , { expires: new Date(Date.now() + 300000)});// IF HTTPS put , secure: true  parameter 
+    console.log(TimeExpire());
     res.status(200).send({message: 'OK'});
 });
 
@@ -603,6 +636,65 @@ app.post('/api/app_chart',function(req,res){
 
 });
 
+app.get('/api/userinfo',function(req,res){
+
+    console.log("API GET");     
+    var data_user = _.findWhere(LoggedUsers, {token:req.cookies.accessToken});
+     if(data_user===undefined)
+     {
+        console.log('Error on finding user on LoggedUsers. on userinfo GET');
+        res.status(404).send({ message: 'Error on finding user on LoggedUsers.' }); 
+     }
+     else
+     {
+        var send_user_info = {
+            name:data_user.uname,
+            lastname:data_user.ulastname,
+            username:data_user.username,
+            app:data_user.application
+        };
+        console.log(send_user_info);
+        res.status(200).send({ userinfo:send_user_info}); 
+     }
+    
+});
+
+app.post('/api/userinfo',function(req,res){
+
+    console.log("API POST");  
+    console.log(req.body);
+    var data_user = _.findWhere(LoggedUsers, {token:req.cookies.accessToken});
+    if(req.body.type === 'modify')
+    {
+        pool.getConnection(function(err, connection) {
+        // Use the connection 
+        if (err) throw err; 
+        console.log('Going to DataBase');
+        var modify_vector = [req.body.uname || data_user.uname, req.body.ulastname || data_user.ulastname ,data_user.pass,data_user.id];
+        console.log(modify_vector);
+        connection.query("UPDATE Usuario SET uname=?, ulastname=?, pass=? WHERE id=?",modify_vector,function (error, results, fields) 
+        {
+            if (error) throw error;
+            if(_.isEmpty(results))
+            {
+                console.log("Can not modify");   
+                res.status(404).send({ message: 'Error on modify task' });                 
+            }
+            else
+            {
+                console.log("Modify OK");   
+                res.status(200).send({ message: 'modify OK' }); 
+            }
+        });            
+        connection.release();
+        if (err) throw err;
+        });
+    }  
+    else
+    {
+        res.status(404).send({ message: 'type not found' }); 
+    }
+});
 
 var httpServer = http.createServer(app);
 httpServer.listen(port);

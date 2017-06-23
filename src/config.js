@@ -8,5 +8,7 @@ module.exports = {
     {  
         name:'app2',
         key:'EGX22960'
-    }]
+    }],
+    algorithm:'aes-256-ctr',
+    password:'d6F3Efeq'
 };
