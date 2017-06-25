@@ -158,9 +158,9 @@ var freeAccess = [
 //MySQL database connection
 var pool  = mysql.createPool({
   connectionLimit : 10,
-  host            : 'localhost',
-  user            : 'bacalhau',
-  password        : '123456',
+  host            : 'awsdatabase.c2dkkyg2p79v.sa-east-1.rds.amazonaws.com',
+  user            : 'DBMAWS',
+  password        : '#19%jk&974G',
   database        : 'datahub'
 });
 
@@ -174,8 +174,17 @@ var transporter = nodemailer.createTransport({
     service: 'hotmail',
     auth: {
         user: 'joaomarcusbacalhau@hotmail.com',
-        pass: 
+        pass: 'Joe&CaK7883578!'
     }
+});
+
+// verify connection configuration
+transporter.verify(function(error, success) {
+   if (error) {
+        console.log(error);
+   } else {
+        console.log('Server is ready to take our messages');
+   }
 });
 
 var app = express();
@@ -663,7 +672,7 @@ app.post('/api/app_chart',function(req,res){
 
 app.get('/api/userinfo',function(req,res){
 
-    console.log("API GET");     
+    console.log("API GET INFO");     
     var data_user = _.findWhere(LoggedUsers, {token:req.cookies.accessToken});
      if(data_user===undefined)
      {
@@ -686,74 +695,71 @@ app.get('/api/userinfo',function(req,res){
 
 app.post('/api/userinfo',function(req,res){
 
-    console.log("API POST");  
+    console.log("API POST INFO");  
     console.log(req.body);
     var data_user = _.findWhere(LoggedUsers, {token:req.cookies.accessToken});
     if(req.body.type === 'modify')
     {
-        if(req.body.old_password === decrypt(data_user.pass))
+        if((req.body.old_password===undefined)&&(req.body.new_password===undefined))//Apenas nome e sobrenome
         {
-            console.log('OLD password typed')
             pool.getConnection(function(err, connection) {
             // Use the connection 
             if (err) throw err; 
             console.log('Going to DataBase');
-            var modify_vector = [req.body.uname, req.body.ulastname,encrypt(req.body.new_password),data_user.id];
+            var modify_vector = [req.body.uname, req.body.ulastname,data_user.id];
             console.log(modify_vector);
-            connection.query("UPDATE Usuario SET uname=?, ulastname=?, pass=? WHERE id=?",modify_vector,function (error, results, fields) 
+            connection.query("UPDATE Usuario SET uname=?, ulastname=? WHERE id=?",modify_vector,function (error, results, fields)
             {
                 if (error) throw error;
                 if(_.isEmpty(results))
                 {
                     console.log("Can not modify");   
-                    res.status(404).send({ message: 'Error on modify task' });                 
+                    res.status(200).send({ message: 'Error on modify task' });                 
                 }
                 else
                 {
                     console.log("Modify OK");   
-                    res.status(200).send({ message: 'modify OK' }); 
-                    UpdateUser(LoggedUsers,req.cookies.accessToken,{ uname:req.body.uname,ulastname:req.body.ulastname,pass:encrypt(req.body.new_password)});
-
+                    UpdateUser(LoggedUsers,req.cookies.accessToken,{ uname:req.body.uname,ulastname:req.body.ulastname,pass:data_user.pass});
+                    res.status(200).send({ message: 'OK' }); 
                 }
             });            
             connection.release();
             if (err) throw err;
             });
         }
-        else
+        else//nome, sobrenome  e password
         {
-            if(req.body.old_password === '')
+            if(req.body.old_password === decrypt(data_user.pass))
             {
+                console.log('OLD password typed')
                 pool.getConnection(function(err, connection) {
                 // Use the connection 
                 if (err) throw err; 
                 console.log('Going to DataBase');
-                var modify_vector = [req.body.uname, req.body.ulastname,data_user.pass,data_user.id];
+                var modify_vector = [req.body.uname, req.body.ulastname,encrypt(req.body.new_password),data_user.id];
                 console.log(modify_vector);
-                connection.query("UPDATE Usuario SET uname=?, ulastname=?, pass=? WHERE id=?",modify_vector,function (error, results, fields)
+                connection.query("UPDATE Usuario SET uname=?, ulastname=?, pass=? WHERE id=?",modify_vector,function (error, results, fields) 
                 {
                     if (error) throw error;
                     if(_.isEmpty(results))
                     {
                         console.log("Can not modify");   
-                        res.status(404).send({ message: 'Error on modify task' });                 
+                        res.status(200).send({ message: 'Error on modify task' });                 
                     }
                     else
                     {
                         console.log("Modify OK");   
-                        res.status(200).send({ message: 'modify OK' }); 
-                        UpdateUser(LoggedUsers,req.cookies.accessToken,{ uname:req.body.uname,ulastname:req.body.ulastname,pass:data_user.pass});
+                        UpdateUser(LoggedUsers,req.cookies.accessToken,{ uname:req.body.uname,ulastname:req.body.ulastname,pass:encrypt(req.body.new_password)});
+                        res.status(200).send({ message: 'OK' }); 
                     }
                 });            
                 connection.release();
                 if (err) throw err;
                 });
-
             }
             else
             {
-                console.log("Can not modify");   
-                res.status(404).send({ message: 'Error on modify' });  
+                res.status(200).send({ message: 'Old password Not Correct.' });   
             }
         }
     }  

@@ -8,43 +8,55 @@
 
                         <div class="form-group">
                             <label for="inputname">Name</label>
-                            <input ng-disabled="g_myaccount_lock_fields" type="text" ng-model="name"  name="name" class="form-control" id="inputname" >
+                            <input ng-disabled="g_myaccount_lock_fields" type="text" ng-model="MyUser.name"  name="name" class="form-control" id="inputname" >
                         </div>
 
                          <div class="form-group">
                             <label for="inputlastname">Last name</label>
-                            <input ng-disabled="g_myaccount_lock_fields" type="text" ng-model="lastname"  name="lastname" class="form-control" id="inputlastname" >
+                            <input ng-disabled="g_myaccount_lock_fields" type="text" ng-model="MyUser.lastname"  name="lastname" class="form-control" id="inputlastname" >
                         </div>
 
                         <div class="form-group">
                             <label for="inputemail">Email</label>
-                            <input ng-disabled="1" type="email" ng-model="email"  name="email" class="form-control" id="inputemail" >
+                            <input ng-disabled="1" type="email" ng-model="MyUser.username"  name="email" class="form-control" id="inputemail" >
                         </div>
 
 
                         <div class="form-group">
                             <label for="inputPassword">Old password</label>
-                            <input ng-disabled="g_myaccount_lock_fields" name="old_password" ng-model="old_password"  type="password" class="form-control" id="inputOldPassword" placeholder="Type old password">
+                            <input ng-disabled="g_myaccount_lock_fields" name="MyUser.old_password" ng-model="MyUser.old_password"  type="password" class="form-control" id="inputOldPassword" placeholder="Type old password">
                         </div>
 
                         <div class="form-group">
                             <label for="inputPasswordCheck">New password</label>
-                            <input ng-disabled="g_myaccount_lock_fields" name="new_password" ng-model="new_password"  type="password" class="form-control" id="inputNewPassword" placeholder="Password check">
+                            <input ng-disabled="g_myaccount_lock_fields" name="MyUser.new_password" ng-model="MyUser.new_password"  type="password" class="form-control" id="inputNewPassword" placeholder="Password check">
                         </div>
 
                         <div class="form-group">
                             <label for="inputPasswordCheck">New password check</label>
-                            <input ng-disabled="g_myaccount_lock_fields" name="new_passwordcheck" ng-model="new_passwordcheck"  type="password" class="form-control" id="inputNewPasswordCheck" placeholder="Password check">
+                            <input ng-disabled="g_myaccount_lock_fields" name="MyUser.new_passwordcheck" ng-model="MyUser.new_passwordcheck"  type="password" class="form-control" id="inputNewPasswordCheck" placeholder="Password check">
                         </div>
 
                         <div class="form-group">
                             <label for="appKey">Application key</label>
-                            <input ng-disabled="1" name="AppKey" ng-model="appkey"  type="text" class="form-control" id="appKey" >
+                            <input ng-disabled="1" name="AppKey" ng-model="MyUser.app"  type="text" class="form-control" id="appKey" >
                         </div>
 
                         <button ng-disabled="g_myaccount_lock_fields" type="submit" id="submit"  class="btn btn-sm btn-default">Save</button>
                         <a href="#!/" role="button" class="btn btn-sm btn-default pull-right" >Back to my app</a>
                     </form>
+                    <div>
+                        <div class="alert alert-danger" role="alert"  ng-show="g_myaccount_error">
+                                <div>{{message}}</div>
+                        </div>
+                    </div>
+
+                     <div>
+                        <div class="alert alert-info" role="alert"  ng-show="g_myaccount_wait">
+                                Wait while we modify your account.
+                        </div>
+                         
+                    </div>
 
 
                 </div>

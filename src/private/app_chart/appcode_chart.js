@@ -75,7 +75,7 @@ myApp.config(function ($routeProvider) {
         resolve: {
             getdata: function($location,$log,$rootScope,$cookies,$http,$window){
 
-                $rootScope.data = [];
+                $rootScope.$watch('MyUser');
                 var host = location.host;        
                 var req = {
                         method: 'GET',
@@ -87,10 +87,15 @@ myApp.config(function ($routeProvider) {
                                 
                         }
                 }
+
         
-        
-                $http(req).then(function(data, status, headers, config){
-                    $rootScope.MyUser = data.data.userinfo;      
+                $http(req).then(function(data, status, headers, config,$scope){
+                    $log.log('RESOLVE MY ACCOUNT');  
+                    $rootScope.MyUser = data.data.userinfo;   
+                    $rootScope.MyUser.old_password = "";
+                    $rootScope.MyUser.new_password = "";
+                    $rootScope.MyUser.new_passwordcheck = "";
+                    $log.log($rootScope.MyUser);  
                     $log.log('success');                             
 
                 }, function(data, status, headers, config)
@@ -249,24 +254,72 @@ myApp.controller('myaccount', ['$scope','$http','$log','$location','$route','$ro
 
 $rootScope.g_myaccount_lock_fields=0;
 $rootScope.g_myaccount_show=1;
+$rootScope.g_myaccount_error = 0;
+$rootScope.g_myaccount_wait = 0;
+$scope.message = ''
 
 
-$log.log($rootScope.MyUser);
-$scope.name = $rootScope.MyUser.name;
-$scope.lastname = $rootScope.MyUser.lastname;
-$scope.email = $rootScope.MyUser.username;
-$scope.old_password = "";
-$scope.new_password = "";
-$scope.new_passwordcheck = "";
-$scope.appkey = $rootScope.MyUser.app;
+$log.log('SCOPE CREATED!');
 
 
 
 
-$scope.submit = function(form) {    
-    $rootScope.g_insert_lock_fields=1;      
+
+$scope.submit = function(form) 
+{    
+    $rootScope.g_insert_lock_fields=1;
+    $rootScope.g_myaccount_wait = 1;
+
+    if(($rootScope.MyUser.old_password==="")&&($rootScope.MyUser.new_password==="")&&($rootScope.MyUser.new_passwordcheck===""))   
+    {
+        $log.log("No need to change the password.");
         var host = location.host;        
         var req = {
+            method: 'POST',
+            url: 'http://'+ host +'/api/userinfo/',
+            headers:    {
+                            'Content-Type': 'application/json'
+                        },
+            data:       { 
+                            type:"modify",
+                            uname:$rootScope.MyUser.name,
+                            ulastname:$rootScope.MyUser.lastname,
+                        }
+        }
+        
+        
+        $http(req).then(function(data, status, headers, config)
+        {         
+                $rootScope.g_myaccount_error = 0;
+                $rootScope.g_insert_lock_fields=0;
+                $rootScope.g_myaccount_wait = 0;
+                $route.reload();   
+                $log.log('success');      
+
+        }, function(data, status, headers, config)
+        {            
+            $log.log('error');
+            $location.path('/404');
+        });
+    }   
+    else
+    {
+        $log.log("CHANGE PASSWORD REQUIRED.");
+        $log.log($rootScope.MyUser);
+        if(($rootScope.MyUser.old_password==="")||($rootScope.MyUser.new_password==="")||($rootScope.MyUser.new_passwordcheck===""))   
+        {
+            $rootScope.g_myaccount_error = 1;
+            $rootScope.g_insert_lock_fields=0;
+            $rootScope.g_myaccount_wait = 0;
+            $scope.message = 'Password is missing.'
+        }
+        else
+        {
+            if($rootScope.MyUser.new_password===$rootScope.MyUser.new_passwordcheck)
+             {
+                $log.log("NEW PASSWORD OK");
+                var host = location.host;        
+                var req = {
                     method: 'POST',
                     url: 'http://'+ host +'/api/userinfo/',
                     headers:    {
@@ -274,25 +327,48 @@ $scope.submit = function(form) {
                                 },
                     data:       { 
                                     type:"modify",
-                                    uname:$scope.name,
-                                    ulastname:$scope.lastname,
-                                    old_password:$scope.old_password,
-                                    new_password:$scope.new_password,
+                                    uname:$rootScope.MyUser.name,
+                                    ulastname:$rootScope.MyUser.lastname,
+                                    old_password:$rootScope.MyUser.old_password,
+                                    new_password:$rootScope.MyUser.new_password,
                                 }
                 }
-        
-        
-        $http(req).then(function(data, status, headers, config){
-
-                     
-            $route.reload();     
-            $log.log('success');              
-
-        }, function(data, status, headers, config)
-        {            
-              $log.log('error');
-              $location.path('/404');
-        });
+                
+                
+                $http(req).then(function(data, status, headers, config)
+                {           
+                    $log.log(data.data.message);
+                    if(data.data.message=== "OK")
+                    {
+                        $rootScope.g_myaccount_error = 0;
+                        $rootScope.g_insert_lock_fields=0;
+                        $rootScope.g_myaccount_wait = 0;
+                        $route.reload();   
+                        $log.log('success');      
+                    }
+                    else
+                    {
+                        $rootScope.g_myaccount_error = 1;
+                        $rootScope.g_insert_lock_fields=0;
+                        $rootScope.g_myaccount_wait = 0;
+                        $scope.message = data.data.message;
+                        $log.log('Error on OK');   
+                    }
+                }, function(data, status, headers, config)
+                {            
+                    $log.log('error');
+                    $location.path('/404');
+                });
+             }
+             else
+             {
+                $rootScope.g_myaccount_error = 1;
+                $rootScope.g_insert_lock_fields=0;
+                $rootScope.g_myaccount_wait = 0;
+                $scope.message = 'Password do not match.'
+             }
+        }
+    }   
 }    
 
 
