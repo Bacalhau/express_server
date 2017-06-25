@@ -10,6 +10,7 @@ var configParameter =require('./config.js');
 var nodemailer = require('nodemailer');
 var my_ejs = require('ejs');
 var mysql = require('mysql');
+var crypto = require('crypto');
 
 
 function encrypt(text){
@@ -107,6 +108,23 @@ function UpdateToken(array,oldToken,newToken)
     }
 }
 
+
+function UpdateUser(array,token,new_data)
+{
+    for(var i = 0; array.length; i++) 
+    {
+        console.log('Iteration: ' + i);
+        if(array[i].token === token)
+        {            
+            array[i].uname = new_data.uname;
+            array[i].ulastname = new_data.ulastname;
+            array[i].pass = new_data.pass;
+            break;
+        }
+        
+    }
+}
+
 function indexSearch(array,item)
 {
     for(var i = 0; i< array.length; i++ )
@@ -156,7 +174,7 @@ var transporter = nodemailer.createTransport({
     service: 'hotmail',
     auth: {
         user: 'joaomarcusbacalhau@hotmail.com',
-        pass: 'Joe&CaK7883578!'
+        pass: 
     }
 });
 
@@ -248,7 +266,10 @@ app.get('/workspace', function(req,res) {
 
     if(req.cookies.accessToken===undefined)
     {
+        var date_expire = new Date(Date.now() + 300000);
         res.cookie('accessToken', req.query.id , { expires: new Date(Date.now() + 300000)});// IF HTTPS put , secure: true  parameter
+        res.cookie('date', date_expire.getTime(), { expires: new Date(Date.now() + 300000)});// IF HTTPS put , secure: true  parameter
+
     } 
     res.render('./app_chart/index2');   
 });
@@ -340,7 +361,7 @@ app.post('/login',function(req,res){
             else
             {
                 console.log('The result is: ', results);
-                if(req.body.password === results[0].pass)
+                if(req.body.password === decrypt(results[0].pass))
                 {
                     console.log('PASSWORD CORRECT');
                     if(_.isEmpty(_.where(LoggedUsers,results[0])||[]))
@@ -398,7 +419,7 @@ app.post('/forgotpassword',function(req,res){
                 fs.readFile(__dirname + '/views/email/emailRecovery.ejs','utf8',function (err, data) {
                     if (err) throw err;
 
-                    var html_string = my_ejs.render(data, { name:results[0].uname,lastname:results[0].ulastname,password:results[0].pass});
+                    var html_string = my_ejs.render(data, { name:results[0].uname,lastname:results[0].ulastname,password:decrypt(results[0].pass)});
                     console.log(html_string);
                     var mailOptions = {
                         from: '"DataHub" <mynodeservermail@gmail.com>', // sender address
@@ -445,7 +466,7 @@ app.post('/register',function(req,res){
                     name:req.body.name,
                     lastname:req.body.lastname,
                     username:req.body.username,
-                    password:req.body.password,
+                    password:encrypt(req.body.password),
                     expire:Date.now(),
                     confirmationId:token,
                     application: 'default'
@@ -533,7 +554,9 @@ app.get('/renewaccess',function(req,res){
     }, configParameter.secret , { expiresIn: '5m' });
      //UPDATE USER TOKEN ON USER LIST
     UpdateToken(LoggedUsers,req.cookies.accessToken,newtoken);
+    var date_expire = new Date(Date.now() + 300000);
     res.cookie('accessToken', newtoken , { expires: new Date(Date.now() + 300000)});// IF HTTPS put , secure: true  parameter 
+    res.cookie('date', date_expire.getTime(), { expires: new Date(Date.now() + 300000)});// IF HTTPS put , secure: true  parameter
     console.log(TimeExpire());
     res.status(200).send({message: 'OK'});
 });
@@ -550,13 +573,14 @@ app.get('/api/app_chart',function(req,res){
         // Use the connection 
         if (err) throw err;
         console.log('Going to DataBase');
-        connection.query("SELECT * FROM Tarefas WHERE TaskOwner=?",data_user.id,function (error, results, fields) 
+        connection.query("SELECT * FROM Tarefas WHERE TaskOwner=? ORDER BY tarefa_due ASC ",data_user.id,function (error, results, fields) 
         {
             if (error) throw error;
             if(_.isEmpty(results))
             {
-                console.log("No task for user");   
-                res.status(404).send({ message: 'This e-mail is not registered.' }); 
+                console.log("No task for user");    
+                res.setHeader('Content-Type', 'application/json');
+                res.status(200).send(JSON.stringify(results));
             }
             else
             {
@@ -583,8 +607,9 @@ app.post('/api/app_chart',function(req,res){
         // Use the connection 
         if (err) throw err; 
         console.log('Going to DataBase');
-        var insert_vector = [data_user.id,req.body.new_task];
-        connection.query("INSERT INTO Tarefas (TaskOwner, tarefa) VALUES (?,?)",insert_vector,function (error, results, fields) 
+        var insert_vector = [data_user.id,req.body.new_task,req.body.task_due.slice(0, 10)];
+        console.log(req.body.task_due.slice(0, 10));
+        connection.query("INSERT INTO Tarefas (TaskOwner, tarefa,tarefa_due) VALUES (?,?,?)",insert_vector,function (error, results, fields) 
         {
             if (error) throw error;
             if(_.isEmpty(results))
@@ -666,29 +691,71 @@ app.post('/api/userinfo',function(req,res){
     var data_user = _.findWhere(LoggedUsers, {token:req.cookies.accessToken});
     if(req.body.type === 'modify')
     {
-        pool.getConnection(function(err, connection) {
-        // Use the connection 
-        if (err) throw err; 
-        console.log('Going to DataBase');
-        var modify_vector = [req.body.uname || data_user.uname, req.body.ulastname || data_user.ulastname ,data_user.pass,data_user.id];
-        console.log(modify_vector);
-        connection.query("UPDATE Usuario SET uname=?, ulastname=?, pass=? WHERE id=?",modify_vector,function (error, results, fields) 
+        if(req.body.old_password === decrypt(data_user.pass))
         {
-            if (error) throw error;
-            if(_.isEmpty(results))
+            console.log('OLD password typed')
+            pool.getConnection(function(err, connection) {
+            // Use the connection 
+            if (err) throw err; 
+            console.log('Going to DataBase');
+            var modify_vector = [req.body.uname, req.body.ulastname,encrypt(req.body.new_password),data_user.id];
+            console.log(modify_vector);
+            connection.query("UPDATE Usuario SET uname=?, ulastname=?, pass=? WHERE id=?",modify_vector,function (error, results, fields) 
             {
-                console.log("Can not modify");   
-                res.status(404).send({ message: 'Error on modify task' });                 
+                if (error) throw error;
+                if(_.isEmpty(results))
+                {
+                    console.log("Can not modify");   
+                    res.status(404).send({ message: 'Error on modify task' });                 
+                }
+                else
+                {
+                    console.log("Modify OK");   
+                    res.status(200).send({ message: 'modify OK' }); 
+                    UpdateUser(LoggedUsers,req.cookies.accessToken,{ uname:req.body.uname,ulastname:req.body.ulastname,pass:encrypt(req.body.new_password)});
+
+                }
+            });            
+            connection.release();
+            if (err) throw err;
+            });
+        }
+        else
+        {
+            if(req.body.old_password === '')
+            {
+                pool.getConnection(function(err, connection) {
+                // Use the connection 
+                if (err) throw err; 
+                console.log('Going to DataBase');
+                var modify_vector = [req.body.uname, req.body.ulastname,data_user.pass,data_user.id];
+                console.log(modify_vector);
+                connection.query("UPDATE Usuario SET uname=?, ulastname=?, pass=? WHERE id=?",modify_vector,function (error, results, fields)
+                {
+                    if (error) throw error;
+                    if(_.isEmpty(results))
+                    {
+                        console.log("Can not modify");   
+                        res.status(404).send({ message: 'Error on modify task' });                 
+                    }
+                    else
+                    {
+                        console.log("Modify OK");   
+                        res.status(200).send({ message: 'modify OK' }); 
+                        UpdateUser(LoggedUsers,req.cookies.accessToken,{ uname:req.body.uname,ulastname:req.body.ulastname,pass:data_user.pass});
+                    }
+                });            
+                connection.release();
+                if (err) throw err;
+                });
+
             }
             else
             {
-                console.log("Modify OK");   
-                res.status(200).send({ message: 'modify OK' }); 
+                console.log("Can not modify");   
+                res.status(404).send({ message: 'Error on modify' });  
             }
-        });            
-        connection.release();
-        if (err) throw err;
-        });
+        }
     }  
     else
     {

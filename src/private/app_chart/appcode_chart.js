@@ -131,6 +131,7 @@ myApp.config(function ($routeProvider) {
                 {            
                     $log.log('error');
                     $location.path('/404');
+                      
                 });
             }
         }
@@ -142,10 +143,30 @@ myApp.config(function ($routeProvider) {
 
 myApp.controller('navController', ['$scope','$http','$log','$location','$route','$rootScope','$window','$cookies','$interval', function($scope,$http,$log,$location,$route,$rootScope,$window,$cookies,$interval){
 
-$rootScope.g_counter_renew = 0;
+$rootScope.g_counter_renew = '5:00';
 $interval(function() {
-    console.log("Interval occurred");
-    $rootScope.g_counter_renew = $rootScope.g_counter_renew + 1;
+    var time_now = new Date(Date.now());
+    var time_expire = $cookies.get('date');
+    var session_time_min = (($cookies.get('date')-time_now.getTime())/60000);
+    var session_time_sec = ((($cookies.get('date')-time_now.getTime())/60000) - Math.floor(session_time_min))*60;
+    //console.log(Math.floor(session_time_min) + ":"+Math.floor(session_time_sec));
+    if((time_expire-time_now)>0)
+    {
+        if(Math.floor(session_time_sec)<10)
+        {
+            $rootScope.g_counter_renew = Math.floor(session_time_min) + ":0"+Math.floor(session_time_sec);
+        }
+        else
+        {
+            $rootScope.g_counter_renew = Math.floor(session_time_min) + ":"+Math.floor(session_time_sec);
+        }
+        
+    }
+    else
+    {
+        $rootScope.g_counter_renew = 'EXPIRED';
+    }
+    
 }, 1000);
 
 
@@ -255,9 +276,8 @@ $scope.submit = function(form) {
                                     type:"modify",
                                     uname:$scope.name,
                                     ulastname:$scope.lastname,
-                                    oldpassword:$scope.old_password,
+                                    old_password:$scope.old_password,
                                     new_password:$scope.new_password,
-                                    new_passwordcheck:$scope.new_passwordcheck
                                 }
                 }
         

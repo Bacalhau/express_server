@@ -14,10 +14,10 @@
     <div style="width: 95%;" ng-controller="mainController">
     <ul class="list-group">
         <li class="list-group-item list-group-item-info" ng-repeat="task in data">
-         ID: {{task.id}} |   {{task.tarefa}} <a style="float: right; cursor: pointer; cursor: hand;" ng-click="remove(task.id)">Delete</a>
+         ID: {{task.id}} |   {{task.tarefa}}  <a style="float: right; cursor: pointer; cursor: hand; padding-left:15px" ng-click="remove(task.id)">Delete</a> <p style="float: right;"> {{task.tarefa_due.slice(0, 10)}}</p>
         </li>
-        <li  class="list-group-item" ng-if="results.length === 0">
-        <strong>No results found...</strong>
+        <li  style="text-align:center" class="list-group-item" ng-if="data.length === 0">
+        <strong >No more tasks!</strong>
         </li>
     </ul>
     </div>
