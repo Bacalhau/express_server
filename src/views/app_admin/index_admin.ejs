@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en-us" ng-app="myApp">
+    <head>
+        <title>DataHub - ToDo</title>
+        <meta charset="UTF-8">
+        <link rel="shortcut icon" href="../assets/favicon.ico">
+        <!-- load bootstrap and fontawesome via CDN -->
+        <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"/>           
+        <link rel="stylesheet" href="../assets/mycss.css"/>     
+
+        <!-- load angular via CDN -->        
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.6.4/angular.min.js"></script>                    
+        <!-- load angular route via CDN -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.6.4/angular-route.min.js"></script>    
+
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.6.1/angular-cookies.min.js"></script>            
+        
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.5.0/Chart.js"></script>                             
+        <script src="../assets/tc-angular-chartjs.js"></script>     
+        <script src="../code/app_admin/appcode_admin.js"></script>     
+    </head>
+    <body>
+        <header>
+            <nav class="navbar navbar-default">
+            <div class="container-fluid" ng-controller="navController" >
+                <div class="navbar-header">
+                <a class="navbar-brand" >ToDo Application</a>
+                </div>
+                <ul class="nav navbar-nav navbar-right">
+                    <li><a href="#!/renewaccess"><span class="glyphicon glyphicon-retweet"></span> Renew Access ( {{g_counter_renew}} ) </a></li>
+                    <li><a href="#!/myaccount"><span class="glyphicon glyphicon-user"></span> MyAccount</a></li>
+                    <li><a href="#!/logout"><span class="glyphicon glyphicon-log-in"></span> Logout</a></li>
+                </ul>
+            </div>
+            </nav>
+		</header>
+        
+                
+        <div class="container-main">
+
+            <div ng-view></div>
+            
+		</div>
+        
+        <div class="footer-text">
+            <p>Posted by: Bacalhau</p>            
+        </div>
+        
+    </body>
+</html>

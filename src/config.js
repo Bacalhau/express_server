@@ -1,14 +1,34 @@
 module.exports = {
 
     secret:'myfirstsecret',
+    algorithm:'aes-256-ctr',
+    password:'d6F3Efeq',
+    server_addres:'http://www.jmbacalhau.com.br:8443',
+    log:0,
+    port:'8443',
+    mysqladress:'awsdatabase.c2dkkyg2p79v.sa-east-1.rds.amazonaws.com',
+    mysqluser:'DBMAWS',
+    mysqlpassword:'#19%jk&974G',
+    mysqldatabase:'datahub',
+    email_service:'hotmail',
+    email_user:'joaomarcusbacalhau@hotmail.com',
+    email_password:'Joe&CaK7883578!',
     applications:[{  
-        name:'app1',
-        key:'EGX2k960'
+        name:'admin',
+        key:'EGX2k960',
+        entryPoint:'admin',
+        expire_time:300000
     },
     {  
-        name:'app2',
-        key:'EGX22960'
-    }],
-    algorithm:'aes-256-ctr',
-    password:'d6F3Efeq'
+        name:'th',
+        key:'EGX22961',
+        entryPoint:'th',
+        expire_time:60000
+    },
+    {
+        name:'default',
+        key:'EGX2k962',
+        entryPoint:'chart',
+        expire_time:9999999999
+    }]
 };

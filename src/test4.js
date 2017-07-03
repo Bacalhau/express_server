@@ -1,13 +1,14 @@
 var nodemailer = require('nodemailer');
 
 
-
+//#g@a12*97H
+//datahubserver@hotmail.com
 
 var transporter = nodemailer.createTransport({
     service: 'hotmail',
     auth: {
-        user: 'joaomarcusbacalhau@hotmail.com',
-        pass: 'Joe&CaK7883578!'
+        user: 'datahubserver@hotmail.com',
+        pass: '#g@a12*97H'
     }
 });
 
